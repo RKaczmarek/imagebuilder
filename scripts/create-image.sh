@@ -109,7 +109,7 @@ if [ -f ${WORKDIR}/downloads/boot-${TARGET_SYSTEM}-${TARGET_ARCH}.dd ]; then
 fi
 
 # for the arm chromebooks an initial partition table is already in the boot.dd which needs to be fixed up now
-if [ "$1" = "chromebook_snow" ] || [ "$1" = "chromebook_veyron" ] || [ "$1" = "chromebook_nyanbig" ]; then
+if [ "${TARGET_SYSTEM}" = "chromebook_snow" ] || [ "${TARGET_SYSTEM}" = "chromebook_veyron" ] || [ "${TARGET_SYSTEM}" = "chromebook_nyanbig" ]; then
   # fix
   sgdisk -C -e -G /dev/loop0
   # verify
@@ -152,7 +152,7 @@ if [ -f ${MOUNT_POINT}/boot/menu/extlinux.conf ]; then
 fi
 
 # for the orbsmart s92 / beelink r89 the boot loader has to be written in a special way to the disk
-if [ "$1" = "orbsmart_s92_beelink_r89" ]; then
+if [ "${TARGET_SYSTEM}" = "orbsmart_s92_beelink_r89" ]; then
   export KERNEL_VERSION=`ls ${MOUNT_POINT}/boot/*Image-* | sed 's,.*Image-,,g' | sort -u`
   ${WORKDIR}/scripts/orbsmart_s92_beelink_r89-prepare-boot.sh ${KERNEL_VERSION}
   ${WORKDIR}/scripts/orbsmart_s92_beelink_r89-create-boot.sh
