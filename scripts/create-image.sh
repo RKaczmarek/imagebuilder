@@ -30,8 +30,8 @@ fi
 
 cd `dirname $0`/..
 export WORKDIR=`pwd`
-export BUILD_ROOT=${WORKDIR}/imagebuilder-root
-export IMAGE_DIR=${WORKDIR}/imagebuilder-diskimage
+export BUILD_ROOT=${WORKDIR}/build/imagebuilder-root
+export IMAGE_DIR=${WORKDIR}/build/imagebuilder-diskimage
 TARGET_SYSTEM=$1
 TARGET_ARCH=$2
 TARGET_DIST=$3
