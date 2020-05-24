@@ -26,10 +26,13 @@ if [ "$#" != "3" ]; then
   exit 1
 fi
 
-export BUILD_ROOT=/compile/local/imagebuilder-root
+TARGET_SYSTEM=$1
+TARGET_ARCH=$2
+TARGET_DIST=$3
 
 cd `dirname $0`/..
 export WORKDIR=`pwd`
+export BUILD_ROOT=${WORKDIR}/build/imagebuilder-root
 
 if [ -d ${BUILD_ROOT} ]; then
   echo ""
@@ -41,73 +44,74 @@ fi
 mkdir -p ${BUILD_ROOT}
 cd ${BUILD_ROOT}
 
-if [ "$2" = "armv7l" ]; then 
+if [ "$TARGET_ARCH" = "armv7l" ]; then 
   BOOTSTRAP_ARCH=armhf
-elif [ "$2" = "aarch64" ]; then 
+elif [ "${TARGET_ARCH}" = "aarch64" ]; then 
   BOOTSTRAP_ARCH=arm64
 fi
-if [ "$3" = "ubuntu" ]; then 
-  LANG=C debootstrap --variant=minbase --arch=${BOOTSTRAP_ARCH} bionic ${BUILD_ROOT} http://ports.ubuntu.com/
-elif [ "$3" = "debian" ]; then 
+if [ "${TARGET_DIST}" = "ubuntu" ]; then 
+  LANG=C debootstrap --arch=${BOOTSTRAP_ARCH} focal ${BUILD_ROOT} http://ports.ubuntu.com/
+elif [ "${TARGET_DIST}" = "debian" ]; then 
   LANG=C debootstrap --variant=minbase --arch=${BOOTSTRAP_ARCH} buster ${BUILD_ROOT} http://deb.debian.org/debian/
 fi
 
-cp ${WORKDIR}/files/${3}-sources.list ${BUILD_ROOT}/etc/apt/sources.list
-cp ${WORKDIR}/scripts/create-chroot.sh ${BUILD_ROOT}
+cp ${WORKDIR}/files/${TARGET_DIST}-sources.list ${BUILD_ROOT}/etc/apt/sources.list
+cp /etc/resolv.conf ${BUILD_ROOT}/etc/resolv.conf
 
 mount -o bind /dev ${BUILD_ROOT}/dev
 mount -o bind /dev/pts ${BUILD_ROOT}/dev/pts
 mount -t sysfs /sys ${BUILD_ROOT}/sys
 mount -t proc /proc ${BUILD_ROOT}/proc
-cp /proc/mounts ${BUILD_ROOT}/etc/mtab  
-cp /etc/resolv.conf ${BUILD_ROOT}/etc/resolv.conf 
 
-chroot ${BUILD_ROOT} /create-chroot.sh ${3}
+
+chroot ${BUILD_ROOT} /create-chroot.sh ${TARGET_DIST}
 
 cd ${BUILD_ROOT}/
-tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-${1}-${2}.tar.gz
-if [ -f ${WORKDIR}/downloads/kernel-mali-${1}-${2}.tar.gz ]; then
-  tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-mali-${1}-${2}.tar.gz
+
+tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ./boot -C ./boot
+tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ./lib/* -C ./
+
+if [ -f ${WORKDIR}/downloads/kernel-mali-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ]; then
+  tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-mali-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz
 fi
-cp -r ${WORKDIR}/boot/boot-${1}-${2}/* boot
 
 rm -f create-chroot.sh
 ( cd ${WORKDIR}/files/extra-files ; tar cf - . ) | tar xf -
-if [ -d ${WORKDIR}/files/extra-files-${2} ]; then
-  ( cd ${WORKDIR}/files/extra-files-${2} ; tar cf - . ) | tar xf -
+if [ -d ${WORKDIR}/files/extra-files-${TARGET_ARCH} ]; then
+  ( cd ${WORKDIR}/files/extra-files-${TARGET_ARCH} ; tar cf - . ) | tar xf -
 fi
-if [ -d ${WORKDIR}/files/extra-files-${3} ]; then
-  ( cd ${WORKDIR}/files/extra-files-${3} ; tar cf - . ) | tar xf -
+if [ -d ${WORKDIR}/files/extra-files-${TARGET_DIST} ]; then
+  ( cd ${WORKDIR}/files/extra-files-${TARGET_DIST} ; tar cf - . ) | tar xf -
 fi
-if [ -d ${WORKDIR}/files/systems/${1}/extra-files-${1}-${2} ]; then
-  ( cd ${WORKDIR}/files/systems/${1}/extra-files-${1}-${2} ; tar cf - . ) | tar xf -
+if [ -d ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH} ]; then
+  ( cd ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH} ; tar cf - . ) | tar xf -
 fi
-if [ -d ${WORKDIR}/files/systems/${1}/extra-files-${1}-${2}-${3} ]; then
-  ( cd ${WORKDIR}/files/systems/${1}/extra-files-${1}-${2}-${3} ; tar cf - . ) | tar xf -
+if [ -d ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST} ]; then
+  ( cd ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST} ; tar cf - . ) | tar xf -
 fi
-if [ -f ${WORKDIR}/downloads/opengl-${1}-${2}.tar.gz ]; then
-  tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-${1}-${2}.tar.gz
+if [ -f ${WORKDIR}/downloads/opengl-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ]; then
+  tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz
 fi
-if [ -f ${WORKDIR}/downloads/opengl-fbdev-${1}-${2}.tar.gz ]; then
-  tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-fbdev-${1}-${2}.tar.gz
+if [ -f ${WORKDIR}/downloads/opengl-fbdev-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ]; then
+  tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-fbdev-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz
 fi
-if [ -f ${WORKDIR}/downloads/opengl-wayland-${1}-${2}.tar.gz ]; then
-  tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-wayland-${1}-${2}.tar.gz
+if [ -f ${WORKDIR}/downloads/opengl-wayland-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ]; then
+  tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-wayland-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz
 fi
-if [ -f ${WORKDIR}/downloads/opengl-rpi-${2}-${3}.tar.gz ]; then
-  tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-rpi-${2}-${3}.tar.gz
+if [ -f ${WORKDIR}/downloads/opengl-rpi-${TARGET_ARCH}-${TARGET_DIST}.tar.gz ]; then
+  tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-rpi-${TARGET_ARCH}-${TARGET_DIST}.tar.gz
 fi
-if [ -f ${WORKDIR}/downloads/xorg-armsoc-${2}-${3}.tar.gz ]; then
-  tar --numeric-owner -xzf ${WORKDIR}/downloads/xorg-armsoc-${2}-${3}.tar.gz
+if [ -f ${WORKDIR}/downloads/xorg-armsoc-${TARGET_ARCH}-${TARGET_DIST}.tar.gz ]; then
+  tar --numeric-owner -xzf ${WORKDIR}/downloads/xorg-armsoc-${TARGET_ARCH}-${TARGET_DIST}.tar.gz
 fi
-if [ -f ${WORKDIR}/downloads/gl4es-${2}-${3}.tar.gz ]; then
-  tar --numeric-owner -xzf ${WORKDIR}/downloads/gl4es-${2}-${3}.tar.gz
+if [ -f ${WORKDIR}/downloads/gl4es-${TARGET_ARCH}-${TARGET_DIST}.tar.gz ]; then
+  tar --numeric-owner -xzf ${WORKDIR}/downloads/gl4es-${TARGET_ARCH}-${TARGET_DIST}.tar.gz
 fi
-if [ -f ${WORKDIR}/files/systems/${1}/rc-local-additions-${1}-${2}-${3}.txt ]; then
+if [ -f ${WORKDIR}/files/systems/${TARGET_SYSTEM}/rc-local-additions-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.txt ]; then
   echo "" >> etc/rc.local
-  echo "# additions for ${1}-${2}-${3}" >> etc/rc.local
+  echo "# additions for ${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}" >> etc/rc.local
   echo "" >> etc/rc.local
-  cat ${WORKDIR}/files/systems/${1}/rc-local-additions-${1}-${2}-${3}.txt >> etc/rc.local
+  cat ${WORKDIR}/files/systems/${TARGET_SYSTEM}/rc-local-additions-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.txt >> etc/rc.local
 fi
 echo "" >> etc/rc.local
 echo "exit 0" >> etc/rc.local
@@ -137,8 +141,8 @@ mv -f ${BUILD_ROOT}/tmp/fsck.org ${BUILD_ROOT}/usr/share/initramfs-tools/hooks/f
 cd ${BUILD_ROOT}
 
 # post install script per system
-if [ -x ${WORKDIR}/files/systems/${1}/postinstall-${1}-${2}-${3}.sh ]; then
-  ${WORKDIR}/files/systems/${1}/postinstall-${1}-${2}-${3}.sh
+if [ -x ${WORKDIR}/files/systems/${TARGET_SYSTEM}/postinstall-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.sh ]; then
+  ${WORKDIR}/files/systems/${TARGET_SYSTEM}/postinstall-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.sh
 fi
 
 cd ${WORKDIR}
@@ -146,5 +150,5 @@ cd ${WORKDIR}
 umount ${BUILD_ROOT}/proc ${BUILD_ROOT}/sys ${BUILD_ROOT}/dev/pts ${BUILD_ROOT}/dev
 
 echo ""
-echo "now run create-image.sh ${1} ${2} ${3} to build the image"
+echo "now run create-image.sh ${TARGET_SYSTEM} ${TARGET_ARCH} ${TARGET_DIST} to build the image"
 echo ""

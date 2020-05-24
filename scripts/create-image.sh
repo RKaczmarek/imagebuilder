@@ -26,34 +26,37 @@ if [ "$#" != "3" ]; then
   exit 1
 fi
 
-export BUILD_ROOT=/compile/local/imagebuilder-root
-export IMAGE_DIR=/compile/local/imagebuilder-diskimage
-export MOUNT_POINT=/tmp/imagebuilder-mnt
 
 cd `dirname $0`/..
 export WORKDIR=`pwd`
+export BUILD_ROOT=${WORKDIR}/imagebuilder-root
+export IMAGE_DIR=${WORKDIR}/imagebuilder-diskimage
+TARGET_SYSTEM=$1
+TARGET_ARCH=$2
+TARGET_DIST=$3
+export MOUNT_POINT=/tmp/imagebuilder-mnt
 
 # check that everything is there and set
-if [ ! -f files/systems/${1}/mbr-partitions-${1}-${2}.txt ] && [ ! -f files/systems/${1}/gpt-partitions-${1}-${2}.txt ]; then
+if [ ! -f files/systems/${TARGET_SYSTEM}/mbr-partitions-${TARGET_SYSTEM}-${TARGET_ARCH}.txt ] && [ ! -f files/systems/${TARGET_SYSTEM}/gpt-partitions-${TARGET_SYSTEM}-${TARGET_ARCH}.txt ]; then
   echo ""
-  echo "files/systems/${1}/mbr-partitions-${1}-${2}.txt or files/systems/${1}/gpt-partitions-${1}-${2}.txt does not exist - giving up"
+  echo "files/systems/${TARGET_SYSTEM}/mbr-partitions-${TARGET_SYSTEM}-${TARGET_ARCH}.txt or files/systems/${TARGET_SYSTEM}/gpt-partitions-${TARGET_SYSTEM}-${TARGET_ARCH}.txt does not exist - giving up"
   echo ""
   exit 1
 fi
-if [ ! -f files/systems/${1}/partition-mapping-${1}-${2}.txt ]; then
+if [ ! -f files/systems/${TARGET_SYSTEM}/partition-mapping-${TARGET_SYSTEM}-${TARGET_ARCH}.txt ]; then
   echo ""
-  echo "files/systems/${1}/partition-mapping-${1}-${2}.txt does not exist - giving up"
+  echo "files/systems/${TARGET_SYSTEM}/partition-mapping-${TARGET_SYSTEM}-${TARGET_ARCH}.txt does not exist - giving up"
   echo ""
   exit 1
 else
   # get partition mapping info
-  . files/systems/${1}/partition-mapping-${1}-${2}.txt
+  . files/systems/${TARGET_SYSTEM}/partition-mapping-${TARGET_SYSTEM}-${TARGET_ARCH}.txt
   # check that all required variables are set
   if [ "$BOOTFS" != "" ]; then
     echo "BOOTFS=$BOOTFS"
   else
     echo ""
-    echo "BOOTFS is not set in files/systems/${1}/partition-mapping-${1}-${2}.txt - giving up"
+    echo "BOOTFS is not set in files/systems/${TARGET_SYSTEM}/partition-mapping-${TARGET_SYSTEM}-${TARGET_ARCH}.txt - giving up"
     echo ""
     exit
   fi
@@ -61,7 +64,7 @@ else
     echo "BOOTPART=$BOOTPART"
   else
     echo ""
-    echo "BOOTPART is not set in files/systems/${1}/partition-mapping-${1}-${2}.txt - giving up"
+    echo "BOOTPART is not set in files/systems/${TARGET_SYSTEM}/partition-mapping-${TARGET_SYSTEM}-${TARGET_ARCH}.txt - giving up"
     echo ""
     exit
   fi
@@ -69,7 +72,7 @@ else
     echo "ROOTPART=$ROOTPART"
   else
     echo ""
-    echo "ROOTPART is not set in files/systems/${1}/partition-mapping-${1}-${2}.txt - giving up"
+    echo "ROOTPART is not set in files/systems/${TARGET_SYSTEM}/partition-mapping-${TARGET_SYSTEM}-${TARGET_ARCH}.txt - giving up"
     echo ""
     exit
   fi
@@ -77,7 +80,7 @@ else
     echo "SWAPPART=$SWAPPART"
   else
     echo ""
-    echo "SWAPPART is not set in files/systems/${1}/partition-mapping-${1}-${2}.txt - giving up"
+    echo "SWAPPART is not set in files/systems/${TARGET_SYSTEM}/partition-mapping-${TARGET_SYSTEM}-${TARGET_ARCH}.txt - giving up"
     echo ""
     exit
   fi
@@ -86,22 +89,22 @@ fi
 mkdir -p ${IMAGE_DIR}
 mkdir -p ${MOUNT_POINT}
 
-if [ -f ${IMAGE_DIR}/${1}-${2}-${3}.img ]; then
+if [ -f ${IMAGE_DIR}/${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.img ]; then
   echo ""
-  echo "image file ${IMAGE_DIR}/${1}-${2}-${3}.img alresdy exists - giving up for safety reasons ..."
+  echo "image file ${IMAGE_DIR}/${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.img alresdy exists - giving up for safety reasons ..."
   echo ""
   exit 1
 fi
 
 # we use less than the marketing capacity of the sd card as it is usually lower in reality
 # 7g for an 8g card and 14g for a 16g card - it can easily be extended to full size later
-dd if=/dev/zero of=${IMAGE_DIR}/${1}-${2}-${3}.img bs=1024k count=1 seek=$((7*1024)) status=progress
-#dd if=/dev/zero of=${IMAGE_DIR}/${1}-${2}-${3}.img bs=1024k count=1 seek=$((14*1024)) status=progress
+dd if=/dev/zero of=${IMAGE_DIR}/${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.img bs=1024k count=1 seek=$((7*1024)) status=progress
+#dd if=/dev/zero of=${IMAGE_DIR}/${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.img bs=1024k count=1 seek=$((14*1024)) status=progress
 
-losetup /dev/loop0 ${IMAGE_DIR}/${1}-${2}-${3}.img
+losetup /dev/loop0 ${IMAGE_DIR}/${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.img
 
-if [ -f ${WORKDIR}/downloads/boot-${1}-${2}.dd ]; then
-  dd if=${WORKDIR}/downloads/boot-${1}-${2}.dd of=/dev/loop0
+if [ -f ${WORKDIR}/downloads/boot-${TARGET_SYSTEM}-${TARGET_ARCH}.dd ]; then
+  dd if=${WORKDIR}/downloads/boot-${TARGET_SYSTEM}-${TARGET_ARCH}.dd of=/dev/loop0
 fi
 
 # for the arm chromebooks an initial partition table is already in the boot.dd which needs to be fixed up now
@@ -113,16 +116,16 @@ if [ "$1" = "chromebook_snow" ] || [ "$1" = "chromebook_veyron" ]; then
 fi
 
 # inspired by https://github.com/jeromebrunet/libretech-image-builder/blob/libretech-cc-xenial-4.13/linux-image.sh
-if [ -f files/systems/${1}/mbr-partitions-${1}-${2}.txt ]; then
-  fdisk /dev/loop0 < files/systems/${1}/mbr-partitions-${1}-${2}.txt
-elif [ -f files/systems/${1}/gpt-partitions-${1}-${2}.txt ]; then
-  fdisk /dev/loop0 < files/systems/${1}/gpt-partitions-${1}-${2}.txt
+if [ -f files/systems/${TARGET_SYSTEM}/mbr-partitions-${TARGET_SYSTEM}-${TARGET_ARCH}.txt ]; then
+  fdisk /dev/loop0 < files/systems/${TARGET_SYSTEM}/mbr-partitions-${TARGET_SYSTEM}-${TARGET_ARCH}.txt
+elif [ -f files/systems/${TARGET_SYSTEM}/gpt-partitions-${TARGET_SYSTEM}-${TARGET_ARCH}.txt ]; then
+  fdisk /dev/loop0 < files/systems/${TARGET_SYSTEM}/gpt-partitions-${TARGET_SYSTEM}-${TARGET_ARCH}.txt
 fi
 
 # this is to make sure we really use the new partition table and have all partitions around
 partprobe /dev/loop0
 losetup -d /dev/loop0
-losetup --partscan /dev/loop0 ${IMAGE_DIR}/${1}-${2}-${3}.img
+losetup --partscan /dev/loop0 ${IMAGE_DIR}/${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.img
 
 if [ "$BOOTFS" = "fat" ]; then
   mkfs.vfat -F32 -n BOOTPART /dev/loop0p$BOOTPART
@@ -162,5 +165,5 @@ losetup -d /dev/loop0
 rmdir ${MOUNT_POINT}
 
 echo ""
-echo "the image is now ready at ${IMAGE_DIR}/${1}-${2}-${3}.img"
+echo "the image is now ready at ${IMAGE_DIR}/${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.img"
 echo ""

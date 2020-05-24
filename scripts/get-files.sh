@@ -43,7 +43,7 @@ chromebook_snow_release_version="5.4.14-stb-cbe%2B"
 #chromebook_snow_tree_tag="v5.4.14"
 chromebook_snow_tree_tag="9051dfe1f2198e2ed41c322359ee8324043d55a9"
 
-odroid_u3_release_version="5.4.14-stb-exy%2B"
+odroid_u3_release_version="5.4.20-stb-exy%2B-20200515-0233-active"
 #odroid_u3_tree_tag="v5.4.14"
 odroid_u3_tree_tag="9051dfe1f2198e2ed41c322359ee8324043d55a9"
 
@@ -92,7 +92,7 @@ fi
 
 if ([ "$1" = "all" ] || [ "$1" = "odroid_u3" ]) && [ "$2" = "armv7l" ]; then
   rm -f downloads/kernel-odroid_u3-armv7l.tar.gz
-  wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${odroid_u3_release_version}/${odroid_u3_release_version}.tar.gz -O downloads/kernel-odroid_u3-armv7l.tar.gz
+  wget -v https://github.com/RKaczmarek/kernel-odroid-u3/releases/download/${odroid_u3_release_version}/${odroid_u3_release_version}.tar.gz -O downloads/kernel-odroid_u3-armv7l.tar.gz
   rm -f downloads/boot-odroid_u3-armv7l.dd
   wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${odroid_u3_tree_tag}/misc.exy/u-boot/boot-odroid_u3-armv7l.dd -O downloads/boot-odroid_u3-armv7l.dd
   rm -f downloads/gl4es-armv7l-debian.tar.gz
