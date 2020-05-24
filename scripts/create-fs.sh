@@ -58,20 +58,22 @@ fi
 
 cp ${WORKDIR}/files/${TARGET_DIST}-sources.list ${BUILD_ROOT}/etc/apt/sources.list
 cp /etc/resolv.conf ${BUILD_ROOT}/etc/resolv.conf
+cp ${WORKDIR}/scripts/create-chroot.sh ${BUILD_ROOT}
 
 mount -o bind /dev ${BUILD_ROOT}/dev
 mount -o bind /dev/pts ${BUILD_ROOT}/dev/pts
 mount -t sysfs /sys ${BUILD_ROOT}/sys
 mount -t proc /proc ${BUILD_ROOT}/proc
 
-
 chroot ${BUILD_ROOT} /create-chroot.sh ${TARGET_DIST}
 
-cd ${BUILD_ROOT}/
+cd ${BUILD_ROOT}
+tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ./boot -C
 
-tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ./boot -C ./boot
-tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ./lib/* -C ./
+cd ${BUILD_ROOT}/lib
+tar --numeric-owner --strip-components=2 -xzf ${WORKDIR}/downloads/kernel-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ./lib/modules
 
+cd ${BUILD_ROOT}
 if [ -f ${WORKDIR}/downloads/kernel-mali-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ]; then
   tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-mali-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz
 fi
