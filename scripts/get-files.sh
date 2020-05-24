@@ -37,7 +37,7 @@ WORKDIR=`pwd`
 TARGET_SYSTEM=$1
 TARGET_ARCH=$2
 
-DOWNLOADS_DIR = ${WORKDIR}/downloads
+DOWNLOADS_DIR=${WORKDIR}/downloads
 
 # create downloads dir
 mkdir ${DOWNLOADS_DIR}
@@ -56,7 +56,7 @@ chromebook_veyron_generic_tree_tag=${generic_tree_tag}
 chromebook_nyanbig_release_version="5.4.35-ntg-cbt+%2B"
 chromebook_nyanbig_generic_tree_tag=${generic_tree_tag}
 
-odroid_u3_release_version="5.4.20-stb-exy%2B-20200515-0233-active"
+odroid_u3_release_version="5.4.20-stb-exy%2B-20200515-0233"
 odroid_u3_generic_tree_tag=${generic_tree_tag}
 
 orbsmart_s92_beelink_r89_release_version="5.4.14-stb-av7%2B"
@@ -145,7 +145,7 @@ fi
 
 if ([ "${TARGET_SYSTEM}" = "all" ] || [ "${TARGET_SYSTEM}" = "odroid_u3" ]) && [ "${TARGET_ARCH}" = "armv7l" ]; then
   rm -f ${DOWNLOADS_DIR}kernel-odroid_u3-armv7l.tar.gz
-  wget -v https://github.com/RKaczmarek/kernel-odroid-u3/releases/download/${odroid_u3_release_version}/${odroid_u3_release_version}.tar.gz -O ${DOWNLOADS_DIR}kernel-odroid_u3-armv7l.tar.gz
+  wget -v https://github.com/RKaczmarek/kernel-odroid-u3/releases/download/${odroid_u3_release_version}-active/${odroid_u3_release_version}.tar.gz -O ${DOWNLOADS_DIR}kernel-odroid_u3-armv7l.tar.gz
   rm -f ${DOWNLOADS_DIR}boot-odroid_u3-armv7l.dd
   wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${odroid_u3_generic_tree_tag}/misc.exy/u-boot/boot-odroid_u3-armv7l.dd -O ${DOWNLOADS_DIR}boot-odroid_u3-armv7l.dd
   rm -f ${DOWNLOADS_DIR}gl4es-armv7l-debian.tar.gz
