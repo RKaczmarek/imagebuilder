@@ -6,15 +6,16 @@ if [ "$#" != "3" ]; then
   echo ""
   echo "possible system options:"
   echo "- chromebook_snow (armv7l)"
-  echo "- chromebook_veyron (armv7l) (not yet implemented)"
+  echo "- chromebook_veyron (armv7l)"
+  echo "- chromebook_nyanbig (armv7l)"
   echo "- odroid_u3 (armv7l)"
   echo "- orbsmart_s92_beelink_r89 (armv7l)"
   echo "- tinkerboard (armv7l)"
   echo "- raspberry_pi (armv7l)"
   echo "- raspberry_pi (aarch64)"
-  echo "- raspberry_pi_4 (armv7l) (not yet implemented)"
+  echo "- raspberry_pi_4 (armv7l) (using a 64bit kernel)"
   echo "- raspberry_pi_4 (aarch64)"
-  echo "- amlogic_gx (armv7l)"
+  echo "- amlogic_gx (armv7l) (using a 64bit kernel)"
   echo "- amlogic_gx (aarch64)"
   echo ""
   echo "possible arch options:"
@@ -108,7 +109,7 @@ if [ -f ${WORKDIR}/downloads/boot-${TARGET_SYSTEM}-${TARGET_ARCH}.dd ]; then
 fi
 
 # for the arm chromebooks an initial partition table is already in the boot.dd which needs to be fixed up now
-if [ "$1" = "chromebook_snow" ] || [ "$1" = "chromebook_veyron" ]; then
+if [ "$1" = "chromebook_snow" ] || [ "$1" = "chromebook_veyron" ] || [ "$1" = "chromebook_nyanbig" ]; then
   # fix
   sgdisk -C -e -G /dev/loop0
   # verify

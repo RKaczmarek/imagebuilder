@@ -6,15 +6,16 @@ if [ "$#" != "3" ]; then
   echo ""
   echo "possible system options:"
   echo "- chromebook_snow (armv7l)"
-  echo "- chromebook_veyron (armv7l) (not yet implemented)"
+  echo "- chromebook_veyron (armv7l)"
+  echo "- chromebook_nyanbig (armv7l)"
   echo "- odroid_u3 (armv7l)"
   echo "- orbsmart_s92_beelink_r89 (armv7l)"
   echo "- tinkerboard (armv7l)"
   echo "- raspberry_pi (armv7l)"
   echo "- raspberry_pi (aarch64)"
-  echo "- raspberry_pi_4 (armv7l) (not yet implemented)"
+  echo "- raspberry_pi_4 (armv7l) (using a 64bit kernel)"
   echo "- raspberry_pi_4 (aarch64)"
-  echo "- amlogic_gx (armv7l)"
+  echo "- amlogic_gx (armv7l) (using a 64bit kernel)"
   echo "- amlogic_gx (aarch64)"
   echo ""
   echo "possible arch options:"
@@ -98,8 +99,8 @@ fi
 if [ -f ${WORKDIR}/downloads/opengl-wayland-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ]; then
   tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-wayland-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz
 fi
-if [ -f ${WORKDIR}/downloads/opengl-rpi-${TARGET_ARCH}-${TARGET_DIST}.tar.gz ]; then
-  tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-rpi-${TARGET_ARCH}-${TARGET_DIST}.tar.gz
+if [ -f ${WORKDIR}/downloads/opengl-mesa-${TARGET_ARCH}-${TARGET_DIST}.tar.gz ]; then
+  tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-mesa-${TARGET_ARCH}-${TARGET_DIST}.tar.gz
 fi
 if [ -f ${WORKDIR}/downloads/xorg-armsoc-${TARGET_ARCH}-${TARGET_DIST}.tar.gz ]; then
   tar --numeric-owner -xzf ${WORKDIR}/downloads/xorg-armsoc-${TARGET_ARCH}-${TARGET_DIST}.tar.gz
@@ -144,6 +145,8 @@ cd ${BUILD_ROOT}
 if [ -x ${WORKDIR}/files/systems/${TARGET_SYSTEM}/postinstall-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.sh ]; then
   ${WORKDIR}/files/systems/${TARGET_SYSTEM}/postinstall-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.sh
 fi
+
+chroot ${BUILD_ROOT} ldconfig
 
 cd ${WORKDIR}
 
