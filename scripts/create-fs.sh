@@ -68,7 +68,7 @@ mount -t proc /proc ${BUILD_ROOT}/proc
 chroot ${BUILD_ROOT} /create-chroot.sh ${TARGET_DIST}
 
 cd ${BUILD_ROOT}
-tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ./boot -C
+tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ./boot
 
 cd ${BUILD_ROOT}/lib
 tar --numeric-owner --strip-components=2 -xzf ${WORKDIR}/downloads/kernel-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ./lib/modules
