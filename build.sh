@@ -104,7 +104,7 @@ if [ ${ARGUMENTS[DIR_CACHE]+_} ]
 then
     if [ ! -d ${ARGUMENTS[DIR_OUT]} ]
     then
-        fail echo "The output directory ${ARGUMENTS[DIR_OUT]} does not exist"
+        fail "The output directory ${ARGUMENTS[DIR_OUT]} does not exist"
     fi
     
     DIR_CACHE=${ARGUMENTS[DIR_CACHE]}
@@ -119,7 +119,7 @@ if [ ${ARGUMENTS[DIR_OUT]+_} ]
 then
     if [ ! -d "${ARGUMENTS[DIR_OUT]}" ]
     then
-        fail echo "The output directory ${ARGUMENTS[DIR_OUT]} does not exist"
+        fail "The output directory ${ARGUMENTS[DIR_OUT]} does not exist"
     fi
 
     DIR_OUT=${ARGUMENTS[DIR_OUT]}

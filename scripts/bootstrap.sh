@@ -46,12 +46,12 @@ then
 
     case "$BOOTSTRAP_DIST" in
         ubuntu)
-            #LANG=C debootstrap --arch=$BOOTSTRAP_ARCH focal $DIR_BOOTSTRAP http://ports.ubuntu.com/
+            LANG=C debootstrap --arch=$BOOTSTRAP_ARCH focal $DIR_BOOTSTRAP http://ports.ubuntu.com/
         ;;
         debian)
-            #LANG=C debootstrap --variant=minbase --arch=$BOOTSTRAP_ARCH buster $DIR_BOOTSTRAP http://deb.debian.org/debian/
+            LANG=C debootstrap --variant=minbase --arch=$BOOTSTRAP_ARCH buster $DIR_BOOTSTRAP http://deb.debian.org/debian/
         ;;
     esac
 fi
 
-#rsync -aHAX --progress $DIR_BOOTSTRAP/ $DIR_TARGET
+rsync -aHAX --info=progress2 $DIR_BOOTSTRAP/ $DIR_TARGET
