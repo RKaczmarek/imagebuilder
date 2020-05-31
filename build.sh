@@ -137,5 +137,9 @@ fi
 echo "Creating build directory $DIR_BUILD"
 mkdir -p "$DIR_BUILD"
 
-echo "$DIR_SCRIPTS/bootstrap.sh $DIR_CACHE $DIR_BUILD ${ARGUMENTS[ARCHITECTURE]} ${ARGUMENTS[DIST]} ${ARGUMENTS[FORCE_BOOTSTRAP]}"
 $DIR_SCRIPTS/bootstrap.sh $DIR_CACHE $DIR_BUILD ${ARGUMENTS[ARCHITECTURE]} ${ARGUMENTS[DIST]} ${ARGUMENTS[FORCE_BOOTSTRAP]}
+
+if [ "${?}" -ne 0 ]
+then
+    exit "${?}"
+fi
