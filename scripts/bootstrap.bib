@@ -2,58 +2,46 @@
 
 declare -A ARCH_MAP=( [armv7l]=armhf [aarch64]=arm64 )
 
-boostrap() {
-    local DIR_CACHE_ROOT=$1
-    local DIR_TARGET=$2
-    local BOOTSTRAP_ARCH=$3
-    local BOOTSTRAP_DIST=$4
-    local REBUILD=$5
+bootstrap() {
+    local BOOTSTRAP_ARCH="$( get_option ARCH )"
+    local BOOTSTRAP_DIST="$( get_option DIST )"
 
     if [ ! ${ARCH_MAP[$BOOTSTRAP_ARCH]+_} ]
     then
-        echo "Invalid architecture $BOOTSTRAP_ARCH for bootstrapping $BOOTSTRAP_DIST"
-        exit 1
+        fail "Invalid architecture $BOOTSTRAP_ARCH for bootstrapping $BOOTSTRAP_DIST"
     fi
 
     BOOTSTRAP_ARCH=${ARCH_MAP[$BOOTSTRAP_ARCH]}
-    DIR_BOOTSTRAP=$DIR_CACHE_ROOT/bootstrap/$BOOTSTRAP_DIST/$BOOTSTRAP_ARCH
+    debug "Mapped $( get_option ARCH ) to $BOOTSTRAP_ARCH"
 
-    if [ ! -d "$DIR_CACHE_ROOT" ]
+    local PATH_CACHE="$( get_path CACHE )"
+    local PATH_BOOTSTRAP=$PATH_CACHE/bootstrap/$BOOTSTRAP_DIST/$BOOTSTRAP_ARCH
+    debug "Caching path for bootstrap is $PATH_BOOTSTRAP"
+
+    if [[ "$( contains_option FORCE_BOOTSTRAP )" == 1 ]]
     then
-        echo "The cache directory $DIR_CACHE_ROOT for bootstrapping does not exist."
-        exit 1
-    fi
+        debug "Recreating bootstrap for $BOOTSTRAP_DIST ($BOOTSTRAP_ARCH)"
 
-    if [ ! -d "$DIR_TARGET" ]
-    then
-        echo "The target directory $DIR_TARGET for bootstrapping does not exist."
-        exit 1
-    fi
-
-    if [ -n "$REBUILD" ]
-    then
-        echo "Recreating bootstrap for $BOOTSTRAP_DIST ($BOOTSTRAP_ARCH)"
-
-        if [ -d $DIR_BOOTSTRAP ]
+        if [ -d $PATH_BOOTSTRAP ]
         then
-            rm -r $DIR_BOOTSTRAP
+            rm -r $PATH_BOOTSTRAP
         fi
     fi
 
-    if [ ! -d "$DIR_BOOTSTRAP" ]
+    if [ ! -d "$PATH_BOOTSTRAP" ]
     then
-        echo "Caching bootstrap for $BOOTSTRAP_DIST ($BOOTSTRAP_ARCH) in $DIR_BOOTSTRAP"
-        mkdir -p "$DIR_BOOTSTRAP"
+        debug "Caching bootstrap for $BOOTSTRAP_DIST ($BOOTSTRAP_ARCH) in $PATH_BOOTSTRAP"
+        mkdir -p "$PATH_BOOTSTRAP"
 
         case "$BOOTSTRAP_DIST" in
             ubuntu)
-                LANG=C debootstrap --arch=$BOOTSTRAP_ARCH focal $DIR_BOOTSTRAP http://ports.ubuntu.com/
+                LANG=C debootstrap --arch=$BOOTSTRAP_ARCH focal $PATH_BOOTSTRAP http://ports.ubuntu.com/
             ;;
             debian)
-                LANG=C debootstrap --variant=minbase --arch=$BOOTSTRAP_ARCH buster $DIR_BOOTSTRAP http://deb.debian.org/debian/
+                LANG=C debootstrap --variant=minbase --arch=$BOOTSTRAP_ARCH buster $PATH_BOOTSTRAP http://deb.debian.org/debian/
             ;;
         esac
     fi
 
-    rsync -aHAX --info=progress2 $DIR_BOOTSTRAP/ $DIR_TARGET
+    rsync -aHAX --info=progress2 $PATH_BOOTSTRAP/ "$( get_path BUILD )"
 }

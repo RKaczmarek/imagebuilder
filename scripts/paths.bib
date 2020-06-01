@@ -50,8 +50,6 @@ load_paths() {
 
     PATHS[BUILD]=$PATH_OUT/build
     PATHS[DIST]=$PATH_OUT/dist
-
-    for K in "${!PATHS[@]}"; do echo $K --- ${PATHS[$K]}; done
 }
 
 get_path() {

@@ -29,11 +29,9 @@ fi
 
 load_paths $PATH_PROJECT_ROOT
 recreate_build_path
-echo READY
+bootstrap
 
-# $PATH_SCRIPTS/bootstrap.sh $PATH_CACHE $PATH_BUILD ${ARGUMENTS[ARCHITECTURE]} ${ARGUMENTS[DIST]} ${ARGUMENTS[FORCE_BOOTSTRAP]}
-
-# if [ "${?}" -ne 0 ]
-# then
-#     exit "${?}"
-# fi
+if [ "${?}" -ne 0 ]
+then
+    exit "${?}"
+fi
