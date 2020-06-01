@@ -1,0 +1,75 @@
+#!/bin/bash
+
+debug() {
+    if [[ "$( contains_option VERBOSE )" == 1 ]]
+    then
+        echo $1
+    fi
+}
+
+error() {
+    echo "Error: $@" 1>&2
+}
+
+fail() {
+    error "$@"
+    exit 1
+}
+
+print_help() {
+    echo ""
+    echo "usage: build.sh [option]..."
+    echo "Build a debian/ubuntu image for a single board computer."
+    echo ""
+    echo "example: build.sh -s=odroid_u3 -a=armv7l -d=ubuntu"
+    echo ""
+    echo "-a, --arch, --architecture        The architecture to use for the image build"
+    echo "                                  - armv7l"
+    echo "                                  - aarch64"
+    echo "-c, --cache, --cache-dir          The directory, where the boostrap cache is build."
+    echo "                                  If specified, the directory already needs to exist."
+    echo "                                  Defaults to {PROJECT_ROOT}/cache"
+    echo "-d, --dist, --distribution        The distribution to build"
+    echo "                                  - ubuntu"
+    echo "                                  - debian"
+    echo "-h, --help                        Print this help"
+    echo "-o, --out, --out-dir              The directory, where the output is generated."
+    echo "                                  If specified, the directory already needs to exist"
+    echo "                                  Defaults to {PROJECT_ROOT}/out"
+    echo "-s, --system                      The system, the image is build for"
+    echo "                                  - chromebook_snow"
+    echo "                                  - chromebook_veyron"
+    echo "                                  - chromebook_nyanbig"
+    echo "                                  - odroid_u3"
+    echo "                                  - orbsmart_s92_beelink_r89"
+    echo "                                  - tinkerboard"
+    echo "                                  - raspberry_pi"
+    echo "                                  - raspberry_pi_4"
+    echo "                                  - amlogic_gx"
+    echo "--force-bootstrap                 Force to recreate the booostrap cache"
+    echo ""
+    echo "More details of the available systems:"
+    echo "- chromebook_snow (armv7l)"
+    echo "- chromebook_veyron (armv7l)"
+    echo "- chromebook_nyanbig (armv7l)"
+    echo "- odroid_u3 (armv7l)"
+    echo "- orbsmart_s92_beelink_r89 (armv7l)"
+    echo "- tinkerboard (armv7l)"
+    echo "- raspberry_pi (armv7l)"
+    echo "- raspberry_pi (aarch64)"
+    echo "- raspberry_pi_4 (armv7l) (using a 64bit kernel)"
+    echo "- raspberry_pi_4 (aarch64)"
+    echo "- amlogic_gx (armv7l) (using a 64bit kernel)"
+    echo "- amlogic_gx (aarch64)"
+    echo ""
+    echo "More details of the architectures:"
+    echo "- armv7l (32bit) userland"
+    echo "- aarch64 (64bit) userland"
+    echo ""
+}
+
+string_join() {
+    local IFS="$1"
+    shift
+    echo "$*"
+}

@@ -1,0 +1,170 @@
+#!/bin/bash
+
+declare -A OPTIONS
+declare -a UNKNOWN
+declare -a VALIDATION_ERRORS
+
+load_options() {
+    local ARGS=( "$@" )
+
+    for i in ${ARGS[@]}
+    do
+        case $i in
+            -a=*|--arch=*|--architecture=*)
+                OPTIONS[ARCH]="${i#*=}"
+                shift
+            ;;
+            -d=*|--dist=*|--distribution=*)
+                OPTIONS[DIST]="${i#*=}"
+                shift
+            ;;
+            -c=*|--cache=*|--cache-dir=*)
+                OPTIONS[PATH_CACHE]="${i#*=}"
+                shift
+            ;;
+            -h|--help)
+                OPTIONS[HELP]=1
+                shift
+            ;;
+            -o=*|--out=*|--out-dir=*)
+                OPTIONS[PATH_OUT]="${i#*=}"
+                shift
+            ;;
+            -s=*|--system=*)
+                OPTIONS[SYSTEM]="${i#*=}"
+                shift
+            ;;
+            -v|--verbose)
+                OPTIONS[VERBOSE]=1
+                shift
+            ;;
+            --force-bootstrap)
+                OPTIONS[FORCE_BOOTSTRAP]=1
+                shift
+            ;;
+            *)
+                # unknown option
+                UNKNOWN+=( $i )
+            ;;
+        esac
+    done
+}
+
+get_option() {
+    local NAME=$1
+    echo ${OPTIONS[$NAME]}
+}
+
+contains_option() {
+    local NAME=$1
+    if [ ${OPTIONS[$NAME]+_} ]
+    then
+        echo 1
+    else
+        echo 0
+    fi
+}
+
+validate_system() {
+    local SYSTEM="$( get_option SYSTEM )"
+    debug "Validating system $SYSTEM"
+    case $SYSTEM in
+        chromebook_snow) ;;
+        chromebook_veyron) ;;
+        chromebook_nyanbig) ;;
+        odroid_u3) ;;
+        orbsmart_s92_beelink_r89) ;;
+        tinkerboard) ;;
+        raspberry_pi) ;;
+        raspberry_pi_4) ;;
+        amlogic_gx) ;;
+        *) VALIDATION_ERRORS+=( "Invalid system $SYSTEM" ) ;;
+    esac
+}
+
+validate_arch() {
+    local ARCH="$( get_option ARCH )"
+    debug "Validating architecture $ARCH"
+    case $ARCH in
+        armv7l) ;;
+        aarch64) ;;
+        *) VALIDATION_ERRORS+=( "Invalid architecture $ARCH" ) ;;
+    esac
+}
+
+validate_dist() {
+    local DIST="$( get_option DIST )"
+    debug "Validating distribution $DIST"
+    case $DIST in
+        ubuntu) ;;
+        debian) ;;
+        *) VALIDATION_ERRORS+=( "Invalid distribution $DIST" ) ;;
+    esac
+}
+
+validate_cache() {
+    debug "Looking for cache option"
+    if [[ "$( contains_option PATH_CACHE )" == 1 ]]
+    then
+        local PATH_CACHE="$( get_option PATH_CACHE )"
+        debug "Validating cache option '$PATH_CACHE'"
+        if [ ! -d $PATH_CACHE ]
+        then
+            VALIDATION_ERRORS+=( "The cache directory $PATH_CACHE does not exist" )
+        fi
+    fi
+}
+
+validate_out() {
+    debug "Looking for output option"
+    if [[ "$( contains_option PATH_OUT )" == 1 ]]
+    then
+        local PATH_OUT="$( get_option PATH_OUT )"
+        debug "Validating output option '$PATH_OUT'"
+        if [ ! -d $PATH_OUT ]
+        then
+            debug "Validating output option '$PATH_OUT'"
+            VALIDATION_ERRORS+=( "The output directory $PATH_OUT does not exist" )
+        fi
+    fi
+}
+
+validate_unknown() {
+    debug "Looking for unknown options"
+    if [ ${#UNKNOWN} -gt 0 ]
+    then
+        debug "Found unknown options"
+        for UNKNOWN_ARG in "${UNKNOWN[@]}"
+        do
+            VALIDATION_ERRORS+=( "Invalid argument $UNKNOWN_ARG" )
+        done
+    fi
+}
+
+validate_options() {
+    validate_system
+    validate_arch
+    validate_dist
+    validate_cache
+    validate_out
+    validate_unknown
+
+    if [[ "$( is_valid )" == 0 ]]
+    then
+        echo "Stopped with errors:"
+        for ERROR in "${VALIDATION_ERRORS[@]}"
+        do
+            echo "$ERROR"
+        done
+        exit 1
+    fi
+}
+
+is_valid() {
+    if [ ${#VALIDATION_ERRORS} -gt 0 ]
+    then
+        echo 0
+    else
+        echo 1
+    fi
+}
