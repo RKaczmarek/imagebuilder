@@ -3,8 +3,8 @@
 declare -A ARCH_MAP=( [armv7l]=armhf [aarch64]=arm64 )
 
 bootstrap() {
-    local BOOTSTRAP_ARCH="$( get_option ARCH )"
-    local BOOTSTRAP_DIST="$( get_option DIST )"
+    local BOOTSTRAP_ARCH=$( get_option ARCH )
+    local BOOTSTRAP_DIST=$( get_option DIST )
 
     if [ ! ${ARCH_MAP[$BOOTSTRAP_ARCH]+_} ]
     then
@@ -14,11 +14,11 @@ bootstrap() {
     BOOTSTRAP_ARCH=${ARCH_MAP[$BOOTSTRAP_ARCH]}
     debug "Mapped $( get_option ARCH ) to $BOOTSTRAP_ARCH"
 
-    local PATH_CACHE="$( get_path CACHE )"
+    local PATH_CACHE=$( get_path CACHE )
     local PATH_BOOTSTRAP=$PATH_CACHE/bootstrap/$BOOTSTRAP_DIST/$BOOTSTRAP_ARCH
     debug "Caching path for bootstrap is $PATH_BOOTSTRAP"
 
-    if [[ "$( contains_option FORCE_BOOTSTRAP )" == 1 ]]
+    if [[ $( contains_option FORCE_BOOTSTRAP ) == 1 ]]
     then
         debug "Recreating bootstrap for $BOOTSTRAP_DIST ($BOOTSTRAP_ARCH)"
 
@@ -28,12 +28,12 @@ bootstrap() {
         fi
     fi
 
-    if [ ! -d "$PATH_BOOTSTRAP" ]
+    if [ ! -d $PATH_BOOTSTRAP ]
     then
         debug "Caching bootstrap for $BOOTSTRAP_DIST ($BOOTSTRAP_ARCH) in $PATH_BOOTSTRAP"
-        mkdir -p "$PATH_BOOTSTRAP"
+        mkdir -p $PATH_BOOTSTRAP
 
-        case "$BOOTSTRAP_DIST" in
+        case $BOOTSTRAP_DIST in
             ubuntu)
                 LANG=C debootstrap --arch=$BOOTSTRAP_ARCH focal $PATH_BOOTSTRAP http://ports.ubuntu.com/
             ;;
@@ -43,5 +43,5 @@ bootstrap() {
         esac
     fi
 
-    rsync -aHAX --info=progress2 $PATH_BOOTSTRAP/ "$( get_path BUILD )"
+    rsync -aHAX --info=progress2 $PATH_BOOTSTRAP/ $( get_path BUILD )
 }

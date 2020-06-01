@@ -7,21 +7,21 @@ PATH_RUN=$( pwd )
 PATH_RUN_RELATIVE=$0
 cd $( dirname $0 )
 PATH_PROJECT_ROOT=$( pwd )
-PATH_SCRIPTS=$PATH_PROJECT_ROOT/scripts
+PATH_LIB=$PATH_PROJECT_ROOT/lib
 
 ### --- import functions --- ###
 
-. $PATH_SCRIPTS/common.bib
-. $PATH_SCRIPTS/options.bib
-. $PATH_SCRIPTS/paths.bib
-. $PATH_SCRIPTS/bootstrap.bib
+. $PATH_LIB/common.lib
+. $PATH_LIB/options.lib
+. $PATH_LIB/paths.lib
+. $PATH_LIB/distribution.lib
 
 ### --- run application --- ###
 
 load_options $@
 validate_options
 
-if [[ "$( contains_option HELP )" == 1 ]]
+if [[ $( contains_option HELP ) == 1 ]]
 then
     print_help
     exit 0

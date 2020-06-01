@@ -14,15 +14,19 @@ load_options() {
                 OPTIONS[ARCH]="${i#*=}"
                 shift
             ;;
-            -d=*|--dist=*|--distribution=*)
-                OPTIONS[DIST]="${i#*=}"
-                shift
-            ;;
             -c=*|--cache=*|--cache-dir=*)
                 OPTIONS[PATH_CACHE]="${i#*=}"
                 shift
             ;;
-            -h|--help)
+            -d=*|--dist=*|--distribution=*)
+                OPTIONS[DIST]="${i#*=}"
+                shift
+            ;;
+            -g*|--gui*)
+                OPTIONS[GUI]=1
+                shift
+            ;;
+            -h*|--help*)
                 OPTIONS[HELP]=1
                 shift
             ;;
@@ -34,12 +38,20 @@ load_options() {
                 OPTIONS[SYSTEM]="${i#*=}"
                 shift
             ;;
-            -v|--verbose)
+            -v*|--verbose*)
                 OPTIONS[VERBOSE]=1
+                shift
+            ;;
+            --disable-swap)
+                OPTIONS[FORCE_DOWNLOAD]=1
                 shift
             ;;
             --force-bootstrap)
                 OPTIONS[FORCE_BOOTSTRAP]=1
+                shift
+            ;;
+            --force-download)
+                OPTIONS[FORCE_DOWNLOAD]=1
                 shift
             ;;
             *)
@@ -66,7 +78,7 @@ contains_option() {
 }
 
 validate_system() {
-    local SYSTEM="$( get_option SYSTEM )"
+    local SYSTEM=$( get_option SYSTEM )
     debug "Validating system $SYSTEM"
     case $SYSTEM in
         chromebook_snow) ;;
@@ -83,7 +95,7 @@ validate_system() {
 }
 
 validate_arch() {
-    local ARCH="$( get_option ARCH )"
+    local ARCH=$( get_option ARCH )
     debug "Validating architecture $ARCH"
     case $ARCH in
         armv7l) ;;
@@ -93,7 +105,7 @@ validate_arch() {
 }
 
 validate_dist() {
-    local DIST="$( get_option DIST )"
+    local DIST=$( get_option DIST )
     debug "Validating distribution $DIST"
     case $DIST in
         ubuntu) ;;
@@ -104,9 +116,9 @@ validate_dist() {
 
 validate_cache() {
     debug "Looking for cache option"
-    if [[ "$( contains_option PATH_CACHE )" == 1 ]]
+    if [[ $( contains_option PATH_CACHE ) == 1 ]]
     then
-        local PATH_CACHE="$( get_option PATH_CACHE )"
+        local PATH_CACHE=$( get_option PATH_CACHE )
         debug "Validating cache option '$PATH_CACHE'"
         if [ ! -d $PATH_CACHE ]
         then
@@ -117,9 +129,9 @@ validate_cache() {
 
 validate_out() {
     debug "Looking for output option"
-    if [[ "$( contains_option PATH_OUT )" == 1 ]]
+    if [[ $( contains_option PATH_OUT ) == 1 ]]
     then
-        local PATH_OUT="$( get_option PATH_OUT )"
+        local PATH_OUT=$( get_option PATH_OUT )
         debug "Validating output option '$PATH_OUT'"
         if [ ! -d $PATH_OUT ]
         then
@@ -149,7 +161,7 @@ validate_options() {
     validate_out
     validate_unknown
 
-    if [[ "$( is_valid )" == 0 ]]
+    if [[ $( is_valid ) == 0 ]]
     then
         echo "Stopped with errors:"
         for ERROR in "${VALIDATION_ERRORS[@]}"
