@@ -1,17 +1,17 @@
 #!/bin/bash
 
-declare -A ARCH_MAP=( [armv7l]=armhf [aarch64]=arm64 )
+declare -A __ARCH_MAP=( [armv7l]=armhf [aarch64]=arm64 )
 
 bootstrap() {
     local BOOTSTRAP_ARCH=$( get_option ARCH )
     local BOOTSTRAP_DIST=$( get_option DIST )
 
-    if [ ! ${ARCH_MAP[$BOOTSTRAP_ARCH]+_} ]
+    if [ ! ${__ARCH_MAP[$BOOTSTRAP_ARCH]+_} ]
     then
         fail "Invalid architecture $BOOTSTRAP_ARCH for bootstrapping $BOOTSTRAP_DIST"
     fi
 
-    BOOTSTRAP_ARCH=${ARCH_MAP[$BOOTSTRAP_ARCH]}
+    BOOTSTRAP_ARCH=${__ARCH_MAP[$BOOTSTRAP_ARCH]}
     debug "Mapped $( get_option ARCH ) to $BOOTSTRAP_ARCH"
 
     local PATH_CACHE=$( get_path CACHE )

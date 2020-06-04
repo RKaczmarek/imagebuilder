@@ -1,6 +1,6 @@
 #!/bin/bash
 
-declare -A PATHS
+declare -A __PATHS
 
 recreate_build_path() {
     local PATH_BUILD=$( get_path BUILD )
@@ -25,13 +25,13 @@ load_paths() {
 
     local PATH_OUT=$( get_path OUT )
 
-    PATHS[BUILD]=$PATH_OUT/build
-    PATHS[DIST]=$PATH_OUT/dist
+    __PATHS[BUILD]=$PATH_OUT/build
+    __PATHS[DIST]=$PATH_OUT/dist
 }
 
 get_path() {
     local KEY=$1
-    echo ${PATHS[$KEY]}
+    echo ${__PATHS[$KEY]}
 }
 
 __create_path_from_option() {
@@ -54,5 +54,5 @@ __create_path_from_option() {
         fi
     fi
 
-    PATHS[$PATH_NAME]=$TARGET_PATH
+    __PATHS[$PATH_NAME]=$TARGET_PATH
 }
