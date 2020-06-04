@@ -2,7 +2,39 @@
 
 declare -A PATHS
 
-create_path_from_option() {
+recreate_build_path() {
+    local PATH_BUILD=$( get_path BUILD )
+    
+    if [ -d $PATH_BUILD ]
+    then
+        debug "Deleting build directory $PATH_BUILD"
+        rm -R $PATH_BUILD
+    fi
+
+    debug "Creating build directory $PATH_BUILD"
+    mkdir -p $PATH_BUILD
+}
+
+load_paths() {
+    local PATH_PROJECT_ROOT=$1
+    local PATH_CACHE_DEFAULT=$PATH_PROJECT_ROOT/cache
+    local PATH_OUT_DEFAULT=$PATH_PROJECT_ROOT/out
+
+    __create_path_from_option PATH_CACHE CACHE $PATH_CACHE_DEFAULT
+    __create_path_from_option PATH_OUT OUT $PATH_OUT_DEFAULT
+
+    local PATH_OUT=$( get_path OUT )
+
+    PATHS[BUILD]=$PATH_OUT/build
+    PATHS[DIST]=$PATH_OUT/dist
+}
+
+get_path() {
+    local KEY=$1
+    echo ${PATHS[$KEY]}
+}
+
+__create_path_from_option() {
     local OPTION_NAME=$1
     local PATH_NAME=$2
     local DEFAULT_PATH=$3
@@ -23,36 +55,4 @@ create_path_from_option() {
     fi
 
     PATHS[$PATH_NAME]=$TARGET_PATH
-}
-
-recreate_build_path() {
-    local PATH_BUILD=$( get_path BUILD )
-    
-    if [ -d $PATH_BUILD ]
-    then
-        debug "Deleting build directory $PATH_BUILD"
-        rm -R $PATH_BUILD
-    fi
-
-    debug "Creating build directory $PATH_BUILD"
-    mkdir -p $PATH_BUILD
-}
-
-load_paths() {
-    local PATH_PROJECT_ROOT=$1
-    local PATH_CACHE_DEFAULT=$PATH_PROJECT_ROOT/cache
-    local PATH_OUT_DEFAULT=$PATH_PROJECT_ROOT/out
-
-    create_path_from_option PATH_CACHE CACHE $PATH_CACHE_DEFAULT
-    create_path_from_option PATH_OUT OUT $PATH_OUT_DEFAULT
-
-    local PATH_OUT=$( get_path OUT )
-
-    PATHS[BUILD]=$PATH_OUT/build
-    PATHS[DIST]=$PATH_OUT/dist
-}
-
-get_path() {
-    local KEY=$1
-    echo ${PATHS[$KEY]}
 }

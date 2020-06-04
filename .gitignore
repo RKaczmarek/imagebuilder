@@ -129,4 +129,5 @@ testem.log
 #
 #### project specific
 #
+/cache
 /downloads
