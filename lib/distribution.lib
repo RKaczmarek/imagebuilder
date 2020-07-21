@@ -53,6 +53,11 @@ create_fs() {
     __copy_distribution_files
     __write_hostname
     __write_hosts
+
+    __update_distribution
+    __install_additional_packages
+    __setup_distribution
+    __cleanup_distribution
 }
 
 __chroot_cmd() {
