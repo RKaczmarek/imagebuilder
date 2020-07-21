@@ -32,7 +32,7 @@ bootstrap() {
         debug "Caching bootstrap for $DIST ($ARCH) in $PATH_CACHE"
         mkdir -p $PATH_CACHE
 
-        case $BOOTSTRAP_DIST in
+        case $DIST in
             ubuntu)
                 LANG=C debootstrap --arch=$BOOTSTRAP_ARCH focal $PATH_CACHE http://ports.ubuntu.com/
             ;;
