@@ -14,6 +14,7 @@ PATH_LIB=$PATH_PROJECT_ROOT/lib
 . $PATH_LIB/common.lib
 . $PATH_LIB/options.lib
 . $PATH_LIB/paths.lib
+. $PATH_LIB/files.lib
 . $PATH_LIB/distribution.lib
 
 ### --- run application --- ###
@@ -28,8 +29,10 @@ then
 fi
 
 load_paths $PATH_PROJECT_ROOT
+download_files
 recreate_build_path
 bootstrap
+create_fs
 
 if [ "${?}" -ne 0 ]
 then

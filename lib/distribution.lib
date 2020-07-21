@@ -3,45 +3,187 @@
 declare -A __ARCH_MAP=( [armv7l]=armhf [aarch64]=arm64 )
 
 bootstrap() {
-    local BOOTSTRAP_ARCH=$( get_option ARCH )
-    local BOOTSTRAP_DIST=$( get_option DIST )
+    local ARCH=$( get_option ARCH )
+    local DIST=$( get_option DIST )
 
-    if [ ! ${__ARCH_MAP[$BOOTSTRAP_ARCH]+_} ]
+    if [ ! ${__ARCH_MAP[$ARCH]+_} ]
     then
-        fail "Invalid architecture $BOOTSTRAP_ARCH for bootstrapping $BOOTSTRAP_DIST"
+        fail "Invalid architecture $ARCH for bootstrapping $DIST"
     fi
 
-    BOOTSTRAP_ARCH=${__ARCH_MAP[$BOOTSTRAP_ARCH]}
-    debug "Mapped $( get_option ARCH ) to $BOOTSTRAP_ARCH"
+    local BOOTSTRAP_ARCH=${__ARCH_MAP[$ARCH]}
+    debug "Mapped $ARCH to $BOOTSTRAP_ARCH"
 
-    local PATH_CACHE=$( get_path CACHE )
-    local PATH_BOOTSTRAP=$PATH_CACHE/bootstrap/$BOOTSTRAP_DIST/$BOOTSTRAP_ARCH
-    debug "Caching path for bootstrap is $PATH_BOOTSTRAP"
+    local PATH_CACHE=$( get_path BOOTSTRAP )
+    debug "Caching path for bootstrap is $PATH_CACHE"
 
     if [[ $( contains_option FORCE_BOOTSTRAP ) == 1 ]]
     then
-        debug "Recreating bootstrap for $BOOTSTRAP_DIST ($BOOTSTRAP_ARCH)"
+        debug "Recreating bootstrap for $DIST ($ARCH)"
 
-        if [ -d $PATH_BOOTSTRAP ]
+        if [ -d $PATH_CACHE ]
         then
-            rm -r $PATH_BOOTSTRAP
+            rm -r $PATH_CACHE
         fi
     fi
 
-    if [ ! -d $PATH_BOOTSTRAP ]
+    if [ ! -d $PATH_CACHE ]
     then
-        debug "Caching bootstrap for $BOOTSTRAP_DIST ($BOOTSTRAP_ARCH) in $PATH_BOOTSTRAP"
-        mkdir -p $PATH_BOOTSTRAP
+        debug "Caching bootstrap for $DIST ($ARCH) in $PATH_CACHE"
+        mkdir -p $PATH_CACHE
 
         case $BOOTSTRAP_DIST in
             ubuntu)
-                LANG=C debootstrap --arch=$BOOTSTRAP_ARCH focal $PATH_BOOTSTRAP http://ports.ubuntu.com/
+                LANG=C debootstrap --arch=$BOOTSTRAP_ARCH focal $PATH_CACHE http://ports.ubuntu.com/
             ;;
             debian)
-                LANG=C debootstrap --variant=minbase --arch=$BOOTSTRAP_ARCH buster $PATH_BOOTSTRAP http://deb.debian.org/debian/
+                LANG=C debootstrap --variant=minbase --arch=$BOOTSTRAP_ARCH buster $PATH_CACHE http://deb.debian.org/debian/
             ;;
         esac
     fi
 
-    rsync -aHAX --info=progress2 $PATH_BOOTSTRAP/ $( get_path BUILD )
+    rsync -aHAX --info=progress2 $PATH_CACHE/ $( get_path BUILD )
+}
+
+create_fs() {
+    # for testing - delete after
+    # end for testing - delete before
+
+    __copy_common_files
+    __copy_distribution_files
+    __write_hostname
+    __write_hosts
+}
+
+__chroot_cmd() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    __init_chroot
+
+    debug "Running 'chroot $@' on $PATH_BUILD"
+    chroot $PATH_BUILD $@
+
+    __destroy_chroot
+}
+
+__init_chroot() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    debug "Initializing chroot on build path $PATH_BUILD"
+
+    mount -o ro,bind /etc/resolv.conf ${PATH_BUILD}/etc/resolv.conf
+    mount -o bind /dev ${PATH_BUILD}/dev
+    mount -o bind /dev/pts ${PATH_BUILD}/dev/pts
+    mount -t sysfs /sys ${PATH_BUILD}/sys
+    mount -t proc /proc ${PATH_BUILD}/proc
+}
+
+__destroy_chroot() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    debug "Destroying chroot on build path $PATH_BUILD"
+
+    umount ${PATH_BUILD}/proc
+    umount ${PATH_BUILD}/sys
+    umount ${PATH_BUILD}/dev/pts
+    umount ${PATH_BUILD}/dev
+    umount ${PATH_BUILD}/etc/resolv.conf
+}
+
+__write_hostname() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    if [[ $( contains_option HOSTNAME ) == 1 ]]
+    then
+        local HOSTNAME=$( get_option HOSTNAME )
+    else
+        local HOSTNAME=changeme
+    fi
+
+    echo $HOSTNAME > $PATH_BUILD/etc/hostname
+}
+
+__write_hosts() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    if [[ $( contains_option HOSTNAME ) == 1 ]]
+    then
+        local HOSTNAME=$( get_option HOSTNAME )
+    else
+        local HOSTNAME=changeme
+    fi
+
+    cat <<EOF > $PATH_BUILD/etc/hosts
+127.0.0.1	localhost
+127.0.1.1	${HOSTNAME}
+
+# The following lines are desirable for IPv6 capable hosts
+::1     ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+EOF
+}
+
+__copy_common_files() {
+    __copy_files "common"
+}
+
+__copy_distribution_files() {
+    local DIST=$( get_option DIST )
+
+    __copy_files $DIST
+}
+
+__copy_files() {
+    local SUBDIR=$1
+    local PATH_FILES=$( get_path FILES )
+    local PATH_BUILD=$( get_path BUILD )
+
+    rsync -aHAXI --info=progress2 $PATH_FILES/distribution/$SUBDIR/ $PATH_BUILD
+}
+
+__update_distribution() {
+    __chroot_cmd apt-get update
+    __chroot_cmd apt-get -yq upgrade
+}
+
+__install_additional_packages() {
+    local DIST=$( get_option DIST )
+
+    case $DIST in
+        ubuntu)
+            __chroot_cmd apt-get -yq install openssh-server dosfstools initramfs-tools
+        ;;
+        debian)
+            __chroot_cmd apt-get -yq install locales vim openssh-server sudo net-tools ifupdown iputils-ping kmod less rsync u-boot-tools usbutils dosfstools mesa-utils mesa-utils-extra console-data task-xfce-desktop xserver-xorg-input-synaptics blueman firmware-linux-free firmware-linux firmware-linux-nonfree firmware-brcm80211 firmware-samsung firmware-libertas pulseaudio pavucontrol lvm2 cryptsetup-bin libllvm7
+        ;;
+        *) ;;
+    esac
+}
+
+__setup_distribution() {
+    __chroot_cmd systemctl enable ssh
+    __chroot_cmd systemctl disable fstrim.timer
+    # in case you want to disable automatic updates
+    #__chroot_cmd systemctl disable apt-daily
+    #__chroot_cmd systemctl disable apt-daily-upgrade
+
+    __chroot_cmd useradd -c linux -d /home/linux -m -p '$6$sEhhlter$njAiCsaYr7lveaAQCmsABlrGbrVip/lcBUlY2M9DUHfaUh0zSLfcJ4mN0BDqH7bg/2BITbp7BK3qPf8zR.3Ad0' -s /bin/bash linux
+    __chroot_cmd usermod -a -G sudo linux
+    __chroot_cmd usermod -a -G audio linux
+    __chroot_cmd usermod -a -G video linux
+
+    # setup locale info for en-us
+    __chroot_cmd sed -i 's,# en_US ISO-8859-1,en_US ISO-8859-1,g;s,# en_US.UTF-8 UTF-8,en_US.UTF-8 UTF-8,g' /etc/locale.gen
+    __chroot_cmd locale-gen
+}
+
+__cleanup_distribution() {
+    # remove dmidecode (only on ubuntu) as it crashes on some arm devices on boot
+    __chroot_cmd apt-get -yq remove dmidecode
+
+    __chroot_cmd apt-get -yq auto-remove
+    __chroot_cmd apt-get clean
 }

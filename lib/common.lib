@@ -52,6 +52,8 @@ print_help() {
     echo "--disable-swap                    Disable generating swap partition for image"
     echo "--force-bootstrap                 Force to recreate the booostrap cache"
     echo "--force-download                  Force to download the required files"
+    echo "--hostname                        The hostname to use for the distribution"
+    echo "                                  Defaults to 'changeme'"
     echo ""
     echo "More details of the available systems:"
     echo "- chromebook_snow (armv7l)"

@@ -54,6 +54,10 @@ load_options() {
                 __OPTIONS[FORCE_DOWNLOAD]=1
                 shift
             ;;
+            --hostname=*)
+                __OPTIONS[HOSTNAME]="${i#*=}"
+                shift
+            ;;
             *)
                 # unknown option
                 __UNKNOWN+=( $i )
@@ -83,15 +87,19 @@ validate_options() {
     __validate_dist
     __validate_cache
     __validate_out
+    __validate_hostname
     __validate_unknown
 
     if [[ $( is_valid ) == 0 ]]
     then
+        echo ""
         echo "Stopped with errors:"
+
         for ERROR in "${__VALIDATION_ERRORS[@]}"
         do
-            echo "$ERROR"
+            error "$ERROR"
         done
+
         exit 1
     fi
 }
@@ -163,8 +171,23 @@ __validate_out() {
         debug "Validating output option '$PATH_OUT'"
         if [ ! -d $PATH_OUT ]
         then
-            debug "Validating output option '$PATH_OUT'"
             __VALIDATION_ERRORS+=( "The output directory $PATH_OUT does not exist" )
+        fi
+    fi
+}
+
+__validate_hostname() {
+    local HOSTNAME_REGEX="^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\-]*[A-Za-z0-9])$"
+
+    debug "Looking for hostname option"
+    if [[ $( contains_option HOSTNAME ) == 1 ]]
+    then
+        local HOSTNAME=$( get_option HOSTNAME )
+        debug "Validating hostname option '$HOSTNAME'"
+
+        if [[ ! $HOSTNAME =~ $HOSTNAME_REGEX ]]
+        then
+            __VALIDATION_ERRORS+=( "The hostname $HOSTNAME is not valid" )
         fi
     fi
 }
