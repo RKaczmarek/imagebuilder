@@ -66,7 +66,7 @@ __chroot_cmd() {
     __init_chroot
 
     debug "Running 'chroot $*' on $PATH_BUILD"
-    #chroot $PATH_BUILD $*
+    chroot $PATH_BUILD $*
 
     __destroy_chroot
 }
