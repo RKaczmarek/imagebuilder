@@ -66,7 +66,7 @@ __chroot_cmd() {
     __init_chroot
 
     debug "Running 'chroot $*' on $PATH_BUILD"
-    chroot $PATH_BUILD $*
+    #chroot $PATH_BUILD $*
 
     __destroy_chroot
 }
@@ -175,13 +175,13 @@ __setup_distribution() {
     #__chroot_cmd systemctl disable apt-daily
     #__chroot_cmd systemctl disable apt-daily-upgrade
 
-    __chroot_cmd useradd -c linux -d /home/linux -m -p '$6$sEhhlter$njAiCsaYr7lveaAQCmsABlrGbrVip/lcBUlY2M9DUHfaUh0zSLfcJ4mN0BDqH7bg/2BITbp7BK3qPf8zR.3Ad0' -s /bin/bash linux
+    __chroot_cmd useradd -c linux -d /home/linux -m -p "'\$6\$sEhhlter\$njAiCsaYr7lveaAQCmsABlrGbrVip/lcBUlY2M9DUHfaUh0zSLfcJ4mN0BDqH7bg/2BITbp7BK3qPf8zR.3Ad0'" -s /bin/bash linux
     __chroot_cmd usermod -a -G sudo linux
     __chroot_cmd usermod -a -G audio linux
     __chroot_cmd usermod -a -G video linux
 
     # setup locale info for en-us
-    __chroot_cmd sed -i 's,# en_US ISO-8859-1,en_US ISO-8859-1,g;s,# en_US.UTF-8 UTF-8,en_US.UTF-8 UTF-8,g' /etc/locale.gen
+    __chroot_cmd sed -i "'s,# en_US ISO-8859-1,en_US ISO-8859-1,g;s,# en_US.UTF-8 UTF-8,en_US.UTF-8 UTF-8,g'" /etc/locale.gen
     __chroot_cmd locale-gen
 }
 
