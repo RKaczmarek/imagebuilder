@@ -22,6 +22,8 @@ download_files() {
         cd $PATH_DOWNLOAD
         __download_files_by_system $SYSTEM
         cd $PATH_WD
+    else
+        debug "Files already downloaded. Abborting download."
     fi
 }
 

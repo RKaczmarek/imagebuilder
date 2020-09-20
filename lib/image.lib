@@ -1,0 +1,160 @@
+#!/bin/bash
+
+declare -A __MAP_FS_BOOT=(
+    [chromebook_snow]=ext4
+    [chromebook_veyron]=ext4
+    [chromebook_nyanbig]=ext4
+    [odroid_u3]=ext4
+    [orbsmart_s92_beelink_r89]=ext4
+    [tinkerboard]=ext4
+    [raspberry_pi]=fat
+    [raspberry_pi_4]=fat
+    [amlogic_gx]=fat
+)
+
+__TIMESTAMP=$( date +%s )
+__IMAGE_FILE=$( get_path OUT )/$( get_option SYSTEM )-$( get_option ARCH )-$( get_option DIST )-$__TIMESTAMP.img
+__ALIGNMENT=$(( 2048 ))
+__SIZE_BOOT=$(( 512 * 1024 * 1024 ))
+__SIZE_SWAP=$(( 1 * 1024 * 1024 * 1024 ))
+__SIZE_BUILD_FREE_SPACE=$(( 256 * 1024 * 1024 ))
+__SIZE_SECTOR=$(( 512 ))
+__SIZE_ALIGNMENT=$(( $__ALIGNMENT * $__SIZE_SECTOR ))
+__LOOP_DISK=/dev/imagebuilder
+
+create_image() {
+    __create_image_file
+    __setup_loop_disk
+    __setup_partitions
+    __setup_filesystems
+    __write_to_image
+    __cleanup_image
+}
+
+__get_disk_usage() {
+    local PATH_DIST=$( get_path DIST )
+    local SIZE_RESULT=( $( du -s $PATH_DIST ) )
+
+    echo $SIZE_RESULT[0]
+}
+
+__create_image_file() {
+    local PATH_OUT=$( get_path OUT )
+    local SIZE_BUILD=$( __get_disk_usage )
+    local IMAGE_SIZE=$(( $__SIZE_ALIGNMENT + $__SIZE_BOOT + $SIZE_BUILD + $__SIZE_BUILD_FREE_SPACE ))
+
+    dd if=/dev/zero of=$__IMAGE_FILE bs=1 count=1 seek=$(( $IMAGE_SIZE )) status=progress
+}
+
+__setup_loop_disk() {
+    local PATH_DOWNLOAD=$( get_path DOWNLOAD )
+    local DIST=$( get_option DIST )
+    local ARCH=$( get_option ARCH )
+    local SYSTEM=$( get_option SYSTEM )
+
+    losetup $__LOOP_DISK $__IMAGE_FILE
+
+    #local DUMP_FILE=$PATH_DOWNLOAD/boot-$SYSTEM-$ARCH.dd
+    #if [ -f $DUMP_FILE ]; then
+    #    dd if=$DUMP_FILE of=$__LOOP_DISK
+    #fi
+
+    # for the arm chromebooks an initial partition table is already in the boot.dd which needs to be fixed up now
+    if [ "$SYSTEM" = "chromebook_snow" ] || [ "$SYSTEM" = "chromebook_veyron" ] || [ "$SYSTEM" = "chromebook_nyanbig" ]; then
+        # fix
+        sgdisk -C -e -G $__LOOP_DISK
+        # verify
+        sgdisk -v $__LOOP_DISK
+    fi
+}
+
+__byte_to_sectors() {
+    local SIZE_BYTE=$1
+    local SIZE_SECTOR_ROUNDUP_CORRECTION=$(( $__SIZE_SECTOR - 1 ))
+    local SIZE_ROUNDED_UP=$(( $SIZE_BYTE + $SIZE_SECTOR_ROUNDUP_CORRECTION ))
+
+    echo $(( $SIZE_ROUNDED_UP / $__SIZE_SECTOR ))
+}
+
+__setup_partitions() {
+    local SECTORS_BOOT=$( __byte_to_sectors $__SIZE_BOOT )
+    local SIZE_BUILD=$( __get_disk_usage )
+    local SIZE_ROOT=$(( $SIZE_BUILD + $__SIZE_BUILD_FREE_SPACE ))
+    local SECTORS_ROOT=$( __byte_to_sectors $SIZE_ROOT )
+
+    fdisk $__LOOP_DISK <<EOF
+o
+n
+p
+1
+$__ALIGNMENT
++$SECTORS_BOOT
+a
+t
+83
+n
+p
+2
+
++$SECTORS_ROOT
+t
+2
+82
+p
+w
+
+
+EOF
+
+    # this is to make sure we really use the new partition table and have all partitions around
+    partprobe $__LOOP_DISK
+    losetup -d $__LOOP_DISK
+    losetup --partscan $__LOOP_DISK $__IMAGE_FILE
+}
+
+__setup_filesystems() {
+    local SYSTEM=$( get_option SYSTEM )
+    local BOOT_FS=${__MAP_FS_BOOT[$SYSTEM]}
+
+    if [ "$BOOT_FS" = "fat" ]; then
+        mkfs.vfat -F32 -n BOOTPART ${__LOOP_DISK}p1
+    elif [ "$BOOT_FS" = "ext4" ]; then
+        mkfs -t ext4 -O ^has_journal -m 0 -L bootpart ${__LOOP_DISK}p1
+    fi
+
+    mkfs -t ext4 -O ^has_journal -m 2 -L rootpart ${__LOOP_DISK}p2
+}
+
+__write_to_image() {
+    local SYSTEM=$( get_option SYSTEM )
+    local PATH_DIST=$( get_path DIST )
+    local PATH_OUT=$( get_path OUT )
+    local PATH_MOUNT=$PATH_OUT/tmp
+
+    mkdir -P $PATH_MOUNT
+
+    mount ${__LOOP_DISK}0p2 $PATH_MOUNT
+    mkdir $PATH_MOUNT/boot
+    mount ${__LOOP_DISK}p1 $PATH_MOUNT/boot
+
+    rsync -axADHSX --no-inc-recursive $PATH_DIST/ $PATH_MOUNT
+
+    local ROOT_PARTUUID=$( blkid | grep "${__LOOP_DISK}p2" | awk '{print $5}' | sed 's,",,g' )
+
+    if [ -f $PATH_MOUNT/boot/extlinux/extlinux.conf ]; then
+        sed -i "s,ROOT_PARTUUID,$ROOT_PARTUUID,g" $PATH_MOUNT/boot/extlinux/extlinux.conf
+        sed -i "s,root=/dev/[\w\d]+,root=$ROOT_PARTUUID,g" $PATH_MOUNT/boot/extlinux/extlinux.conf
+    fi
+    if [ -f $PATH_MOUNT/boot/menu/extlinux.conf ]; then
+        sed -i "s,ROOT_PARTUUID,$ROOT_PARTUUID,g" $PATH_MOUNT/boot/menu/extlinux.conf
+    fi
+
+    umount $PATH_MOUNT/boot 
+    umount $PATH_MOUNT
+
+    rmdir ${MOUNT_POINT}
+}
+
+__cleanup_image() {
+    losetup -d $__LOOP_DISK
+}

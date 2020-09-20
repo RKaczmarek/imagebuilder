@@ -58,6 +58,13 @@ create_fs() {
     __install_additional_packages
     __setup_distribution
     __cleanup_distribution
+
+    __copy_boot_files
+    __extract_downloads
+    __extract_system_files
+    __adjust_config_files
+    __update_initramfs
+    __run_system_postinstall
 }
 
 __chroot_cmd() {
@@ -186,9 +193,152 @@ __setup_distribution() {
 }
 
 __cleanup_distribution() {
-    # remove dmidecode (only on ubuntu) as it crashes on some arm devices on boot
-    __chroot_cmd apt-get -yq remove dmidecode
-
     __chroot_cmd apt-get -yq auto-remove
     __chroot_cmd apt-get clean
+}
+
+__copy_boot_files() {
+    local PATH_BUILD=$( get_path BUILD )
+    local PATH_FILES=$( get_path FILES )
+    local ARCH=$( get_option ARCH )
+    local SYSTEM=$( get_option SYSTEM )
+
+    if [ -d $PATH_FILES/boot/boot-$SYSTEM-$ARCH ]
+    then
+        rsync -aHAX --info=progress2 $PATH_FILES/boot/boot-$SYSTEM-$ARCH/ $PATH_BUILD/boot
+    fi
+}
+
+__extract_downloads() {
+    local PATH_DOWNLOAD=$( get_path DOWNLOAD )
+    local PATH_BUILD=$( get_path BUILD )
+    local DIST=$( get_option DIST )
+    local ARCH=$( get_option ARCH )
+    local SYSTEM=$( get_option SYSTEM )
+    local O_WD=$( pwd )
+    
+    cd $PATH_BUILD/lib
+    tar --numeric-owner --strip-components=2 -xzf $PATH_DOWNLOAD/kernel-$SYSTEM-$ARCH.tar.gz ./lib/modules
+
+    cd $PATH_BUILD
+    if [ -f $PATH_DOWNLOAD/kernel-mali-$SYSTEM-$ARCH.tar.gz ]
+    then
+        tar --numeric-owner -xzf $PATH_DOWNLOAD/kernel-mali-$SYSTEM-$ARCH.tar.gz
+    fi
+
+    if [ -f $PATH_DOWNLOAD/opengl-$SYSTEM-$ARCH.tar.gz ]
+    then
+        tar --numeric-owner -xzf $PATH_DOWNLOAD/opengl-$SYSTEM-$ARCH.tar.gz
+    fi
+
+    if [ -f $PATH_DOWNLOAD/opengl-fbdev-$SYSTEM-$ARCH.tar.gz ]
+    then
+        tar --numeric-owner -xzf $PATH_DOWNLOAD/opengl-fbdev-$SYSTEM-$ARCH.tar.gz
+    fi
+
+    if [ -f $PATH_DOWNLOAD/opengl-wayland-$SYSTEM-$ARCH.tar.gz ]
+    then
+        tar --numeric-owner -xzf $PATH_DOWNLOAD/opengl-wayland-$SYSTEM-$ARCH.tar.gz
+    fi
+
+    if [ -f $PATH_DOWNLOAD/opengl-mesa-$ARCH-$DIST.tar.gz ]
+    then
+        tar --numeric-owner -xzf $PATH_DOWNLOAD/opengl-mesa-$ARCH-$DIST.tar.gz
+    fi
+
+    if [ -f $PATH_DOWNLOAD/xorg-armsoc-$ARCH-$DIST.tar.gz ]
+    then
+        tar --numeric-owner -xzf $PATH_DOWNLOAD/xorg-armsoc-$ARCH-$DIST.tar.gz
+    fi
+
+    if [ -f $PATH_DOWNLOAD/gl4es-$ARCH-$DIST.tar.gz ]
+    then
+        tar --numeric-owner -xzf $PATH_DOWNLOAD/gl4es-$ARCH-$DIST.tar.gz
+    fi
+
+    cd $O_WD
+}
+
+__extract_system_files() {
+    local PATH_BUILD=$( get_path BUILD )
+    local PATH_FILES=$( get_path FILES )
+    local DIST=$( get_option DIST )
+    local ARCH=$( get_option ARCH )
+    local SYSTEM=$( get_option SYSTEM )
+    local O_WD=$( pwd )
+
+    local PATH_SYSTEM_FILES=$PATH_FILES/systems/$SYSTEM
+
+    local SOURCE=$PATH_SYSTEM_FILES/extra-files-$SYSTEM-$ARCH
+    if [ -d $SOURCE ]; then
+        rsync -aHAXI --info=progress2 $SOURCE/ $PATH_BUILD
+    fi
+
+    SOURCE=$PATH_SYSTEM_FILES/extra-files-$SYSTEM-$ARCH-$DIST
+    if [ -d $SOURCE ]; then
+        rsync -aHAXI --info=progress2 $SOURCE/ $PATH_BUILD
+    fi
+
+    if [ -f $PATH_SYSTEM_FILES/rc-local-additions-$SYSTEM-$ARCH-$DIST.txt ]; then
+        echo "" >> etc/rc.local
+        echo "# additions for $SYSTEM-$ARCH-$DIST" >> etc/rc.local
+        echo "" >> etc/rc.local
+        cat $PATH_SYSTEM_FILES/rc-local-additions-$SYSTEM-$ARCH-$DIST.txt >> etc/rc.local
+    fi
+
+    echo "" >> etc/rc.local
+    echo "exit 0" >> etc/rc.local
+}
+
+__adjust_config_files() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    if [ -f $PATH_BUILD/etc/modules-load.d/cups-filters.conf ]; then
+        sed -i 's,^lp,#lp,g' $PATH_BUILD/etc/modules-load.d/cups-filters.conf
+        sed -i 's,^ppdev,#ppdev,g' $PATH_BUILD/etc/modules-load.d/cups-filters.conf
+        sed -i 's,^parport_pc,#parport_pc,g' $PATH_BUILD/etc/modules-load.d/cups-filters.conf
+    fi
+
+    if [ -f $PATH_BUILD/etc/NetworkManager/NetworkManager.conf ]; then
+        sed -i 's,^managed=false,managed=true,g' $PATH_BUILD/etc/NetworkManager/NetworkManager.conf
+        touch $PATH_BUILD/etc/NetworkManager/conf.d/10-globally-managed-devices.conf
+    fi
+
+    if [ -f $PATH_BUILD/etc/default/numlockx ]; then
+        sed -i 's,^NUMLOCK=auto,NUMLOCK=off,g' $PATH_BUILD/etc/default/numlockx
+    fi
+}
+
+__update_initramfs() {
+    local PATH_BUILD=$( get_path BUILD )
+    local KERNEL_VERSION=`ls $PATH_BUILD/boot/*Image-* | sed 's,.*Image-,,g' | sort -u`
+
+    local FSCK_ORIGIN=$PATH_BUILD/usr/share/initramfs-tools/hooks/fsck
+    local FSCK_BACKUP=$PATH_BUILD/tmp/fsck.org
+
+    # hack to get the fsck binaries in properly even in our chroot env
+    cp -f $FSCK_ORIGIN $FSCK_BACKUP
+    sed -i 's,fsck_types=.*,fsck_types="vfat ext4",g' $FSCK_ORIGIN
+    __chroot_cmd update-initramfs -c -k $KERNEL_VERSION
+    mv -f $FSCK_BACKUP $FSCK_ORIGIN
+}
+
+__run_system_postinstall() {
+    local PATH_BUILD=$( get_path BUILD )
+    local PATH_FILES=$( get_path FILES )
+    local DIST=$( get_option DIST )
+    local ARCH=$( get_option ARCH )
+    local SYSTEM=$( get_option SYSTEM )
+    local O_WD=$( pwd )
+
+    local PATH_SYSTEM_FILES=$PATH_FILES/systems/$SYSTEM
+    local POSTINSTALL_SCRIPT=$PATH_SYSTEM_FILES/postinstall-$SYSTEM-$ARCH-$DIST.sh
+
+    if [ -x $POSTINSTALL_SCRIPT ]; then
+        cd $PATH_BUILD
+        $POSTINSTALL_SCRIPT
+        cd $O_WD
+    fi
+
+    __chroot_cmd ldconfig
 }

@@ -66,7 +66,16 @@ mount -t sysfs /sys ${BUILD_ROOT}/sys
 mount -t proc /proc ${BUILD_ROOT}/proc
 
 chroot ${BUILD_ROOT} /create-chroot.sh ${TARGET_DIST}
+rm -f create-chroot.sh
 
+
+#( cd ${WORKDIR}/files/extra-files ; tar cf - . ) | tar xf -
+#if [ -d ${WORKDIR}/files/extra-files-${TARGET_ARCH} ]; then
+#  ( cd ${WORKDIR}/files/extra-files-${TARGET_ARCH} ; tar cf - . ) | tar xf -
+#fi
+#if [ -d ${WORKDIR}/files/extra-files-${TARGET_DIST} ]; then
+#  ( cd ${WORKDIR}/files/extra-files-${TARGET_DIST} ; tar cf - . ) | tar xf -
+#fi
 cd ${BUILD_ROOT}
 tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ./boot
 
@@ -76,21 +85,6 @@ tar --numeric-owner --strip-components=2 -xzf ${WORKDIR}/downloads/kernel-${TARG
 cd ${BUILD_ROOT}
 if [ -f ${WORKDIR}/downloads/kernel-mali-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ]; then
   tar --numeric-owner -xzf ${WORKDIR}/downloads/kernel-mali-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz
-fi
-
-rm -f create-chroot.sh
-( cd ${WORKDIR}/files/extra-files ; tar cf - . ) | tar xf -
-if [ -d ${WORKDIR}/files/extra-files-${TARGET_ARCH} ]; then
-  ( cd ${WORKDIR}/files/extra-files-${TARGET_ARCH} ; tar cf - . ) | tar xf -
-fi
-if [ -d ${WORKDIR}/files/extra-files-${TARGET_DIST} ]; then
-  ( cd ${WORKDIR}/files/extra-files-${TARGET_DIST} ; tar cf - . ) | tar xf -
-fi
-if [ -d ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH} ]; then
-  ( cd ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH} ; tar cf - . ) | tar xf -
-fi
-if [ -d ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST} ]; then
-  ( cd ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST} ; tar cf - . ) | tar xf -
 fi
 if [ -f ${WORKDIR}/downloads/opengl-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz ]; then
   tar --numeric-owner -xzf ${WORKDIR}/downloads/opengl-${TARGET_SYSTEM}-${TARGET_ARCH}.tar.gz
@@ -110,6 +104,12 @@ fi
 if [ -f ${WORKDIR}/downloads/gl4es-${TARGET_ARCH}-${TARGET_DIST}.tar.gz ]; then
   tar --numeric-owner -xzf ${WORKDIR}/downloads/gl4es-${TARGET_ARCH}-${TARGET_DIST}.tar.gz
 fi
+if [ -d ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH} ]; then
+  ( cd ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH} ; tar cf - . ) | tar xf -
+fi
+if [ -d ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST} ]; then
+  ( cd ${WORKDIR}/files/systems/${TARGET_SYSTEM}/extra-files-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST} ; tar cf - . ) | tar xf -
+fi
 if [ -f ${WORKDIR}/files/systems/${TARGET_SYSTEM}/rc-local-additions-${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}.txt ]; then
   echo "" >> etc/rc.local
   echo "# additions for ${TARGET_SYSTEM}-${TARGET_ARCH}-${TARGET_DIST}" >> etc/rc.local
@@ -118,6 +118,8 @@ if [ -f ${WORKDIR}/files/systems/${TARGET_SYSTEM}/rc-local-additions-${TARGET_SY
 fi
 echo "" >> etc/rc.local
 echo "exit 0" >> etc/rc.local
+
+## current position
 
 # adjust some config files if they exist
 if [ -f ${BUILD_ROOT}/etc/modules-load.d/cups-filters.conf ]; then
