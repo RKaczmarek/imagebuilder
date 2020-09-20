@@ -278,16 +278,17 @@ __extract_system_files() {
     if [ -d $SOURCE ]; then
         rsync -aHAXI --info=progress2 $SOURCE/ $PATH_BUILD
     fi
-
+    
+    local RC_LOCAL_FILE=$PATH_BUILD/etc/rc.local
     if [ -f $PATH_SYSTEM_FILES/rc-local-additions-$SYSTEM-$ARCH-$DIST.txt ]; then
-        echo "" >> etc/rc.local
-        echo "# additions for $SYSTEM-$ARCH-$DIST" >> etc/rc.local
-        echo "" >> etc/rc.local
-        cat $PATH_SYSTEM_FILES/rc-local-additions-$SYSTEM-$ARCH-$DIST.txt >> etc/rc.local
+        echo "" >> $RC_LOCAL_FILE
+        echo "# additions for $SYSTEM-$ARCH-$DIST" >> $RC_LOCAL_FILE
+        echo "" >> $$RC_LOCAL_FILE
+        cat $PATH_SYSTEM_FILES/rc-local-additions-$SYSTEM-$ARCH-$DIST.txt >> $RC_LOCAL_FILE
     fi
 
-    echo "" >> etc/rc.local
-    echo "exit 0" >> etc/rc.local
+    echo "" >> $RC_LOCAL_FILE
+    echo "exit 0" >> $RC_LOCAL_FILE
 }
 
 __adjust_config_files() {
