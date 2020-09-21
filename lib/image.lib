@@ -175,7 +175,7 @@ __write_to_image() {
 
     if [ -f $PATH_MOUNT/boot/extlinux/extlinux.conf ]; then
         sed -i "s,ROOT_PARTUUID,$ROOT_PARTUUID,g" $PATH_MOUNT/boot/extlinux/extlinux.conf
-        sed -i "s,root=/dev/[\w\d]+,root=$ROOT_PARTUUID,g" $PATH_MOUNT/boot/extlinux/extlinux.conf
+        sed -i "s,root=/dev/[a-zA-Z0-9]+,root=$ROOT_PARTUUID,g" $PATH_MOUNT/boot/extlinux/extlinux.conf
     fi
     if [ -f $PATH_MOUNT/boot/menu/extlinux.conf ]; then
         sed -i "s,ROOT_PARTUUID,$ROOT_PARTUUID,g" $PATH_MOUNT/boot/menu/extlinux.conf
