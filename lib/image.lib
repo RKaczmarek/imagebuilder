@@ -140,9 +140,9 @@ w
 EOF
 
     # this is to make sure we really use the new partition table and have all partitions around
-    partprobe $__LOOP_DISK
-    losetup -d $__LOOP_DISK
-    losetup --partscan $__LOOP_DISK $IMAGE_FILE_NAME
+    # partprobe $__LOOP_DISK
+    # losetup -d $__LOOP_DISK
+    # losetup --partscan $__LOOP_DISK $IMAGE_FILE_NAME
 }
 
 __setup_filesystems() {
@@ -150,12 +150,12 @@ __setup_filesystems() {
     local BOOT_FS=${__MAP_FS_BOOT[$SYSTEM]}
 
     if [ "$BOOT_FS" = "fat" ]; then
-        mkfs.vfat -F32 -n BOOTPART ${__LOOP_DISK}p1
+        mkfs.vfat -F32 -n BOOTPART "${__LOOP_DISK}p1"
     elif [ "$BOOT_FS" = "ext4" ]; then
-        mkfs -t ext4 -O ^has_journal -m 0 -L bootpart ${__LOOP_DISK}p1
+        mkfs -t ext4 -O ^has_journal -m 0 -L bootpart "${__LOOP_DISK}p1"
     fi
 
-    mkfs -t ext4 -O ^has_journal -m 2 -L rootpart ${__LOOP_DISK}p2
+    mkfs -t ext4 -O ^has_journal -m 2 -L rootpart "${__LOOP_DISK}p2"
 }
 
 __write_to_image() {
@@ -166,9 +166,9 @@ __write_to_image() {
 
     mkdir -P $PATH_MOUNT
 
-    mount ${__LOOP_DISK}0p2 $PATH_MOUNT
+    mount "${__LOOP_DISK}p2" $PATH_MOUNT
     mkdir $PATH_MOUNT/boot
-    mount ${__LOOP_DISK}p1 $PATH_MOUNT/boot
+    mount "${__LOOP_DISK}p1" $PATH_MOUNT/boot
 
     rsync -axADHSX --no-inc-recursive $PATH_BUILD/ $PATH_MOUNT
 
