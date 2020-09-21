@@ -41,15 +41,32 @@ __get_disk_usage() {
     echo $(( ${SIZE_RESULT[0]} * 1024 ))
 }
 
+__get_boot_sectors() {
+    echo $( __bytes_to_sectors $__SIZE_BOOT )
+}
+
+__get_build_sectors() {
+    local SIZE_BUILD=$( __get_disk_usage )
+    local SIZE=$(( $SIZE_BUILD + $__SIZE_BUILD_FREE_SPACE ))
+
+    echo $( __bytes_to_sectors $SIZE )
+}
+
+__calculate_image_sectors() {
+    local SECTORS_BOOT=$( __get_boot_sectors )
+    local SECTORS_BUILD=$( __get_build_sectors )
+
+    echo $(( $__SIZE_ALIGNMENT + $SECTORS_BOOT + $SECTORS_BUILD ))
+}
+
 __create_image_file() {
     local IMAGE_FILE_NAME=$( __get_image_file_name )
     local PATH_DIST=$( get_path DIST )
-    local SIZE_BUILD=$( __get_disk_usage )
-    local IMAGE_SIZE=$(( $__SIZE_ALIGNMENT + $__SIZE_BOOT + $SIZE_BUILD + $__SIZE_BUILD_FREE_SPACE ))
+    local IMAGE_SECTORS=$( __calculate_image_sectors )
 
-    mkdir -p $PATH_DIST
+    mkdir -p $IMAGE_SECTORS
 
-    dd if=/dev/zero of=$IMAGE_FILE_NAME bs=1 count=1 seek=$(( $IMAGE_SIZE )) status=progress
+    dd if=/dev/zero of=$IMAGE_FILE_NAME bs=$__SIZE_SECTOR count=1 seek=$IMAGE_SECTORS status=progress
 }
 
 __setup_loop_disk() {
@@ -73,7 +90,7 @@ __setup_loop_disk() {
     fi
 }
 
-__byte_to_sectors() {
+__bytes_to_sectors() {
     local SIZE_BYTE=$1
     local SIZE_SECTOR_ROUNDUP_CORRECTION=$(( $__SIZE_SECTOR - 1 ))
     local SIZE_ROUNDED_UP=$(( $SIZE_BYTE + $SIZE_SECTOR_ROUNDUP_CORRECTION ))
@@ -83,10 +100,8 @@ __byte_to_sectors() {
 
 __setup_partitions() {
     local IMAGE_FILE_NAME=$( __get_image_file_name )
-    local SECTORS_BOOT=$( __byte_to_sectors $__SIZE_BOOT )
-    local SIZE_BUILD=$( __get_disk_usage )
-    local SIZE_ROOT=$(( $SIZE_BUILD + $__SIZE_BUILD_FREE_SPACE ))
-    local SECTORS_ROOT=$( __byte_to_sectors $SIZE_ROOT )
+    local SECTORS_BOOT=$( __get_boot_sectors )
+    local SECTORS_BUILD=$( __get_build_sectors )
 
     fdisk $__LOOP_DISK <<EOF
 o
@@ -102,7 +117,7 @@ n
 p
 2
 
-+$SECTORS_ROOT
++$SECTORS_BUILD
 t
 2
 82
