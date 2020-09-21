@@ -136,7 +136,7 @@ t
 p
 w
 EOF
-) || ( echo cating useless error )
+) || ( debug "Catching useless error" )
 
     # this is to make sure we really use the new partition table and have all partitions around
     partprobe $__LOOP_DISK
@@ -163,7 +163,7 @@ __write_to_image() {
     local PATH_OUT=$( get_path OUT )
     local PATH_MOUNT=$PATH_OUT/tmp
 
-    mkdir -P $PATH_MOUNT
+    mkdir -p $PATH_MOUNT
 
     mount "${__LOOP_DISK}p2" $PATH_MOUNT
     mkdir $PATH_MOUNT/boot
