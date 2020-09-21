@@ -135,13 +135,12 @@ t
 83
 p
 w
-
-EOF
+EOF || $( echo cating useless error )
 
     # this is to make sure we really use the new partition table and have all partitions around
-    # partprobe $__LOOP_DISK
-    # losetup -d $__LOOP_DISK
-    # losetup --partscan $__LOOP_DISK $IMAGE_FILE_NAME
+    partprobe $__LOOP_DISK
+    losetup -d $__LOOP_DISK
+    losetup --partscan $__LOOP_DISK $IMAGE_FILE_NAME
 }
 
 __setup_filesystems() {
