@@ -1,6 +1,10 @@
 #!/bin/bash
 
 declare -A __ARCH_MAP=( [armv7l]=armhf [aarch64]=arm64 )
+declare -A __BOOTSTRAP_INCLUDES=(
+    [ubuntu]="openssh-server,dosfstools,initramfs-tools"
+    [debian]="locales,vim,openssh-server,sudo,net-tools,ifupdown,iputils-ping,kmod,less,rsync,u-boot-tools,usbutils,dosfstools,mesa-utils,mesa-utils-extra,console-data,task-xfce-desktop,xserver-xorg-input-synaptics,blueman,firmware-linux-free,firmware-linux,firmware-linux-nonfree,firmware-brcm80211,firmware-samsung,firmware-libertas,pulseaudio,pavucontrol,lvm2,cryptsetup-bin,libllvm7"
+)
 
 bootstrap() {
     local ARCH=$( get_option ARCH )
@@ -32,12 +36,14 @@ bootstrap() {
         debug "Caching bootstrap for $DIST ($ARCH) in $PATH_CACHE"
         mkdir -p $PATH_CACHE
 
+        local INCLUDES=${__BOOTSTRAP_INCLUDES[$DIST]}
+
         case $DIST in
             ubuntu)
-                LANG=C debootstrap --arch=$BOOTSTRAP_ARCH focal $PATH_CACHE http://ports.ubuntu.com/
+                LANG=C debootstrap --arch=$BOOTSTRAP_ARCH --include=$INCLUDES focal $PATH_CACHE http://ports.ubuntu.com/
             ;;
             debian)
-                LANG=C debootstrap --variant=minbase --arch=$BOOTSTRAP_ARCH buster $PATH_CACHE http://deb.debian.org/debian/
+                LANG=C debootstrap --variant=minbase --arch=$BOOTSTRAP_ARCH --include=$INCLUDES buster $PATH_CACHE http://deb.debian.org/debian/
             ;;
         esac
     fi
@@ -54,10 +60,7 @@ create_fs() {
     __write_hostname
     __write_hosts
 
-    __update_distribution
-    __install_additional_packages
     __setup_distribution
-    __cleanup_distribution
 
     __copy_boot_files
     __extract_downloads
@@ -164,27 +167,6 @@ __copy_files() {
     rsync -aHAXI --info=progress2 $PATH_FILES/distribution/$SUBDIR/ $PATH_BUILD
 }
 
-__update_distribution() {
-    __chroot_cmd apt-get update
-    __chroot_cmd apt-get -yq upgrade
-}
-
-__install_additional_packages() {
-    local DIST=$( get_option DIST )
-
-    debug "Installing additional packages for distribution '$DIST'"
-
-    case $DIST in
-        ubuntu)
-            __chroot_cmd apt-get -yq install openssh-server dosfstools initramfs-tools
-        ;;
-        debian)
-            __chroot_cmd apt-get -yq install locales vim openssh-server sudo net-tools ifupdown iputils-ping kmod less rsync u-boot-tools usbutils dosfstools mesa-utils mesa-utils-extra console-data task-xfce-desktop xserver-xorg-input-synaptics blueman firmware-linux-free firmware-linux firmware-linux-nonfree firmware-brcm80211 firmware-samsung firmware-libertas pulseaudio pavucontrol lvm2 cryptsetup-bin libllvm7
-        ;;
-        *) ;;
-    esac
-}
-
 __setup_distribution() {
     debug "Setting up distribution"
 
@@ -202,12 +184,6 @@ __setup_distribution() {
     # setup locale info for en-us
     __chroot_cmd sed -i 's,# en_US ISO-8859-1,en_US ISO-8859-1,g;s,# en_US.UTF-8 UTF-8,en_US.UTF-8 UTF-8,g' /etc/locale.gen
     __chroot_cmd locale-gen
-}
-
-__cleanup_distribution() {
-    debug "Setting up distribution"
-    __chroot_cmd apt-get -yq auto-remove
-    __chroot_cmd apt-get clean
 }
 
 __copy_boot_files() {
