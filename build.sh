@@ -16,6 +16,7 @@ PATH_LIB=$PATH_PROJECT_ROOT/lib
 . $PATH_LIB/paths.lib
 . $PATH_LIB/files.lib
 . $PATH_LIB/distribution.lib
+. $PATH_LIB/image.lib
 
 ### --- run application --- ###
 
@@ -33,6 +34,7 @@ download_files
 recreate_build_path
 bootstrap
 create_fs || create_fs_cleanup
+create_image
 
 if [ "${?}" -ne 0 ]
 then
