@@ -112,6 +112,8 @@ __write_hostname() {
         local HOSTNAME=changeme
     fi
 
+    debug "Writing hostname '$HOSTNAME'"
+
     echo $HOSTNAME > $PATH_BUILD/etc/hostname
 }
 
@@ -139,12 +141,14 @@ EOF
 }
 
 __copy_common_files() {
+    debug "Syncing common distribution files"
     __copy_files "common"
 }
 
 __copy_distribution_files() {
     local DIST=$( get_option DIST )
 
+    debug "Syncing files for distribution '$DIST'"
     __copy_files $DIST
 }
 
@@ -164,6 +168,8 @@ __update_distribution() {
 __install_additional_packages() {
     local DIST=$( get_option DIST )
 
+    debug "Installing additional packages for distribution '$DIST'"
+
     case $DIST in
         ubuntu)
             __chroot_cmd apt-get -yq install openssh-server dosfstools initramfs-tools
@@ -176,6 +182,8 @@ __install_additional_packages() {
 }
 
 __setup_distribution() {
+    debug "Setting up distribution"
+
     __chroot_cmd systemctl enable ssh
     __chroot_cmd systemctl disable fstrim.timer
     # in case you want to disable automatic updates
@@ -193,6 +201,7 @@ __setup_distribution() {
 }
 
 __cleanup_distribution() {
+    debug "Setting up distribution"
     __chroot_cmd apt-get -yq auto-remove
     __chroot_cmd apt-get clean
 }
@@ -203,9 +212,11 @@ __copy_boot_files() {
     local ARCH=$( get_option ARCH )
     local SYSTEM=$( get_option SYSTEM )
 
-    if [ -d $PATH_FILES/boot/boot-$SYSTEM-$ARCH ]
+    local PATH_BOOT_FILES=$PATH_FILES/boot/boot-$SYSTEM-$ARCH
+    if [ -d $PATH_BOOT_FILES ]
     then
-        rsync -aHAX --info=progress2 $PATH_FILES/boot/boot-$SYSTEM-$ARCH/ $PATH_BUILD/boot
+        debug "Copying files from $PATH_BOOT_FILES"
+        rsync -aHAX --info=progress2 $PATH_BOOT_FILES/ $PATH_BUILD/boot
     fi
 }
 
@@ -216,47 +227,39 @@ __extract_downloads() {
     local ARCH=$( get_option ARCH )
     local SYSTEM=$( get_option SYSTEM )
     local O_WD=$( pwd )
-    
+
+    debug "Old working directory is '$O_WD'"
+
+    local CURRENT_FILE=$PATH_DOWNLOAD/kernel-$SYSTEM-$ARCH.tar.gz
+
+    debug "Changing working directory to '$PATH_BUILD/lib'"
     cd $PATH_BUILD/lib
-    tar --numeric-owner --strip-components=2 -xzf $PATH_DOWNLOAD/kernel-$SYSTEM-$ARCH.tar.gz ./lib/modules
 
+    debug "Extracting file $CURRENT_FILE"
+    tar --numeric-owner --strip-components=2 -xzf $CURRENT_FILE ./lib/modules
+
+    debug "Changing working directory to '$PATH_BUILD'"
     cd $PATH_BUILD
-    if [ -f $PATH_DOWNLOAD/kernel-mali-$SYSTEM-$ARCH.tar.gz ]
-    then
-        tar --numeric-owner -xzf $PATH_DOWNLOAD/kernel-mali-$SYSTEM-$ARCH.tar.gz
-    fi
 
-    if [ -f $PATH_DOWNLOAD/opengl-$SYSTEM-$ARCH.tar.gz ]
-    then
-        tar --numeric-owner -xzf $PATH_DOWNLOAD/opengl-$SYSTEM-$ARCH.tar.gz
-    fi
-
-    if [ -f $PATH_DOWNLOAD/opengl-fbdev-$SYSTEM-$ARCH.tar.gz ]
-    then
-        tar --numeric-owner -xzf $PATH_DOWNLOAD/opengl-fbdev-$SYSTEM-$ARCH.tar.gz
-    fi
-
-    if [ -f $PATH_DOWNLOAD/opengl-wayland-$SYSTEM-$ARCH.tar.gz ]
-    then
-        tar --numeric-owner -xzf $PATH_DOWNLOAD/opengl-wayland-$SYSTEM-$ARCH.tar.gz
-    fi
-
-    if [ -f $PATH_DOWNLOAD/opengl-mesa-$ARCH-$DIST.tar.gz ]
-    then
-        tar --numeric-owner -xzf $PATH_DOWNLOAD/opengl-mesa-$ARCH-$DIST.tar.gz
-    fi
-
-    if [ -f $PATH_DOWNLOAD/xorg-armsoc-$ARCH-$DIST.tar.gz ]
-    then
-        tar --numeric-owner -xzf $PATH_DOWNLOAD/xorg-armsoc-$ARCH-$DIST.tar.gz
-    fi
-
-    if [ -f $PATH_DOWNLOAD/gl4es-$ARCH-$DIST.tar.gz ]
-    then
-        tar --numeric-owner -xzf $PATH_DOWNLOAD/gl4es-$ARCH-$DIST.tar.gz
-    fi
+    __extract_file $PATH_DOWNLOAD/kernel-mali-$SYSTEM-$ARCH.tar.gz
+    __extract_file $PATH_DOWNLOAD/opengl-$SYSTEM-$ARCH.tar.gz
+    __extract_file $PATH_DOWNLOAD/opengl-fbdev-$SYSTEM-$ARCH.tar.gz
+    __extract_file $PATH_DOWNLOAD/opengl-wayland-$SYSTEM-$ARCH.tar.gz
+    __extract_file $PATH_DOWNLOAD/opengl-mesa-$ARCH-$DIST.tar.gz
+    __extract_file $PATH_DOWNLOAD/xorg-armsoc-$ARCH-$DIST.tar.gz
+    __extract_file $PATH_DOWNLOAD/xorg-armsoc-$ARCH-$DIST.tar.gz
 
     cd $O_WD
+}
+
+__extract_file() {
+    local FILE_TO_EXTRACT=$1
+    
+    if [ -f $FILE_TO_EXTRACT ]
+    then
+        debug "Extracting file $FILE_TO_EXTRACT"
+        tar --numeric-owner -xzf $FILE_TO_EXTRACT
+    fi
 }
 
 __extract_system_files() {
@@ -265,25 +268,27 @@ __extract_system_files() {
     local DIST=$( get_option DIST )
     local ARCH=$( get_option ARCH )
     local SYSTEM=$( get_option SYSTEM )
-    local O_WD=$( pwd )
 
     local PATH_SYSTEM_FILES=$PATH_FILES/systems/$SYSTEM
-
     local SOURCE=$PATH_SYSTEM_FILES/extra-files-$SYSTEM-$ARCH
     if [ -d $SOURCE ]; then
+        debug "Syncing '$SOURCE' to '$PATH_BUILD'"
         rsync -aHAXI --info=progress2 $SOURCE/ $PATH_BUILD
     fi
 
     SOURCE=$PATH_SYSTEM_FILES/extra-files-$SYSTEM-$ARCH-$DIST
     if [ -d $SOURCE ]; then
+        debug "Syncing '$SOURCE' to '$PATH_BUILD'"
         rsync -aHAXI --info=progress2 $SOURCE/ $PATH_BUILD
     fi
     
     local RC_LOCAL_FILE=$PATH_BUILD/etc/rc.local
     if [ -f $PATH_SYSTEM_FILES/rc-local-additions-$SYSTEM-$ARCH-$DIST.txt ]; then
+        debug "Writing additions to $RC_LOCAL_FILE"
+
         echo "" >> $RC_LOCAL_FILE
         echo "# additions for $SYSTEM-$ARCH-$DIST" >> $RC_LOCAL_FILE
-        echo "" >> $$RC_LOCAL_FILE
+        echo "" >> $RC_LOCAL_FILE
         cat $PATH_SYSTEM_FILES/rc-local-additions-$SYSTEM-$ARCH-$DIST.txt >> $RC_LOCAL_FILE
     fi
 
@@ -295,17 +300,23 @@ __adjust_config_files() {
     local PATH_BUILD=$( get_path BUILD )
 
     if [ -f $PATH_BUILD/etc/modules-load.d/cups-filters.conf ]; then
+        debug "Adjusting cups-filters"
+
         sed -i 's,^lp,#lp,g' $PATH_BUILD/etc/modules-load.d/cups-filters.conf
         sed -i 's,^ppdev,#ppdev,g' $PATH_BUILD/etc/modules-load.d/cups-filters.conf
         sed -i 's,^parport_pc,#parport_pc,g' $PATH_BUILD/etc/modules-load.d/cups-filters.conf
     fi
 
     if [ -f $PATH_BUILD/etc/NetworkManager/NetworkManager.conf ]; then
+        debug "Adjusting NetworkManager configuration"
+        
         sed -i 's,^managed=false,managed=true,g' $PATH_BUILD/etc/NetworkManager/NetworkManager.conf
         touch $PATH_BUILD/etc/NetworkManager/conf.d/10-globally-managed-devices.conf
     fi
 
     if [ -f $PATH_BUILD/etc/default/numlockx ]; then
+        debug "Adjusting numlock"
+        
         sed -i 's,^NUMLOCK=auto,NUMLOCK=off,g' $PATH_BUILD/etc/default/numlockx
     fi
 }
@@ -316,6 +327,8 @@ __update_initramfs() {
 
     local FSCK_ORIGIN=$PATH_BUILD/usr/share/initramfs-tools/hooks/fsck
     local FSCK_BACKUP=$PATH_BUILD/tmp/fsck.org
+
+    debug "Updating initramfs"
 
     # hack to get the fsck binaries in properly even in our chroot env
     cp -f $FSCK_ORIGIN $FSCK_BACKUP
@@ -335,7 +348,10 @@ __run_system_postinstall() {
     local PATH_SYSTEM_FILES=$PATH_FILES/systems/$SYSTEM
     local POSTINSTALL_SCRIPT=$PATH_SYSTEM_FILES/postinstall-$SYSTEM-$ARCH-$DIST.sh
 
+    
     if [ -x $POSTINSTALL_SCRIPT ]; then
+        debug "Running postinstll script for $SYSTEM-$ARCH-$DIST"
+
         cd $PATH_BUILD
         $POSTINSTALL_SCRIPT
         cd $O_WD
