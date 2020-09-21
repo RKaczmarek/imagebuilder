@@ -13,7 +13,6 @@ declare -A __MAP_FS_BOOT=(
 )
 
 __TIMESTAMP=$( date +%s )
-__IMAGE_FILE=$( get_path DIST )/$( get_option SYSTEM )-$( get_option ARCH )-$( get_option DIST )-$__TIMESTAMP.img
 __ALIGNMENT=$(( 2048 ))
 __SIZE_BOOT=$(( 512 * 1024 * 1024 ))
 __SIZE_SWAP=$(( 1 * 1024 * 1024 * 1024 ))
@@ -31,6 +30,10 @@ create_image() {
     __cleanup_image
 }
 
+__get_image_file_name() {
+    echo $( get_path DIST )/$( get_option SYSTEM )-$( get_option ARCH )-$( get_option DIST )-$__TIMESTAMP.img
+}
+
 __get_disk_usage() {
     local PATH_BUILD=$( get_path BUILD )
     local SIZE_RESULT=( $( du -s $PATH_BUILD ) )
@@ -39,20 +42,22 @@ __get_disk_usage() {
 }
 
 __create_image_file() {
+    local IMAGE_FILE_NAME=$( __get_image_file_name )
     local PATH_DIST=$( get_path DIST )
     local SIZE_BUILD=$( __get_disk_usage )
     local IMAGE_SIZE=$(( $__SIZE_ALIGNMENT + $__SIZE_BOOT + $SIZE_BUILD + $__SIZE_BUILD_FREE_SPACE ))
 
     mkdir -p $PATH_DIST
 
-    dd if=/dev/zero of=$__IMAGE_FILE bs=1 count=1 seek=$(( $IMAGE_SIZE )) status=progress
+    dd if=/dev/zero of=$IMAGE_FILE_NAME bs=1 count=1 seek=$(( $IMAGE_SIZE )) status=progress
 }
 
 __setup_loop_disk() {
+    local IMAGE_FILE_NAME=$( __get_image_file_name )
     local PATH_DOWNLOAD=$( get_path DOWNLOAD )
     local SYSTEM=$( get_option SYSTEM )
 
-    losetup $__LOOP_DISK $__IMAGE_FILE
+    losetup $__LOOP_DISK $IMAGE_FILE_NAME
 
     #local DUMP_FILE=$PATH_DOWNLOAD/boot-$SYSTEM-$ARCH.dd
     #if [ -f $DUMP_FILE ]; then
@@ -77,6 +82,7 @@ __byte_to_sectors() {
 }
 
 __setup_partitions() {
+    local IMAGE_FILE_NAME=$( __get_image_file_name )
     local SECTORS_BOOT=$( __byte_to_sectors $__SIZE_BOOT )
     local SIZE_BUILD=$( __get_disk_usage )
     local SIZE_ROOT=$(( $SIZE_BUILD + $__SIZE_BUILD_FREE_SPACE ))
@@ -109,7 +115,7 @@ EOF
     # this is to make sure we really use the new partition table and have all partitions around
     partprobe $__LOOP_DISK
     losetup -d $__LOOP_DISK
-    losetup --partscan $__LOOP_DISK $__IMAGE_FILE
+    losetup --partscan $__LOOP_DISK $IMAGE_FILE_NAME
 }
 
 __setup_filesystems() {
