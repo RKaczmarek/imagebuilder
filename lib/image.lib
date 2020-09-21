@@ -110,6 +110,11 @@ __setup_partitions() {
     local SECTORS_BUILD_BEGIN=$(( $SECTORS_BOOT_END + 1 ))
     local SECTORS_BUILD_END=$(( $SECTORS_BUILD_BEGIN + $( __get_build_sectors ) ))
 
+    debug "SECTORS_BOOT_BEGIN=$SECTORS_BOOT_BEGIN"
+    debug "SECTORS_BOOT_END=$SECTORS_BOOT_END"
+    debug "SECTORS_BUILD_BEGIN=$SECTORS_BUILD_BEGIN"
+    debug "SECTORS_BUILD_END=$SECTORS_BUILD_END"
+
     fdisk $__LOOP_DISK <<EOF
 o
 n
