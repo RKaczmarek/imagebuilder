@@ -234,9 +234,9 @@ __extract_downloads() {
 
     debug "Changing working directory to '$PATH_BUILD/boot'"
     cd $PATH_BUILD/boot
-    
+
     debug "Extracting file $CURRENT_FILE"
-    tar --numeric-owner --strip-components=1 -xzf $CURRENT_FILE ./boot
+    tar --numeric-owner --strip-components=2 -xzf $CURRENT_FILE ./boot
 
     debug "Changing working directory to '$PATH_BUILD/lib'"
     cd $PATH_BUILD/lib
