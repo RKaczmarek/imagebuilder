@@ -22,11 +22,17 @@ __SIZE_ALIGNMENT=$(( $__ALIGNMENT * $__SIZE_SECTOR ))
 __LOOP_DISK=/dev/loop0
 
 create_image() {
+    debug "Creating image file"
     __create_image_file
+    debug "Setting up loop disk"
     __setup_loop_disk
+    debug "Setting up partitions"
     __setup_partitions
+    debug "Setting up filesystems"
     __setup_filesystems
+    debug "Writing data to image file"
     __write_to_image
+    debug "Cleaning up image file"
     __cleanup_image
 }
 
