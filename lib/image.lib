@@ -69,7 +69,7 @@ __create_image_file() {
     local PATH_DIST=$( get_path DIST )
     local IMAGE_SECTORS=$( __calculate_image_sectors )
 
-    mkdir -p $IMAGE_SECTORS
+    mkdir -p $PATH_DIST
 
     dd if=/dev/zero of=$IMAGE_FILE_NAME bs=$__SIZE_SECTOR count=1 seek=$IMAGE_SECTORS status=progress
 }
