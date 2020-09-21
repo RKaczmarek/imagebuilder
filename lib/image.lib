@@ -20,7 +20,7 @@ __SIZE_SWAP=$(( 1 * 1024 * 1024 * 1024 ))
 __SIZE_BUILD_FREE_SPACE=$(( 256 * 1024 * 1024 ))
 __SIZE_SECTOR=$(( 512 ))
 __SIZE_ALIGNMENT=$(( $__ALIGNMENT * $__SIZE_SECTOR ))
-__LOOP_DISK=/dev/imagebuilder
+__LOOP_DISK=/dev/loop0
 
 create_image() {
     __create_image_file
