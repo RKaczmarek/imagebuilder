@@ -135,7 +135,8 @@ t
 83
 p
 w
-EOF || $( echo cating useless error )
+EOF
+|| $( echo cating useless error )
 
     # this is to make sure we really use the new partition table and have all partitions around
     partprobe $__LOOP_DISK
