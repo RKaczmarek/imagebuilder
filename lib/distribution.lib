@@ -68,7 +68,7 @@ create_fs() {
 }
 
 create_fs_cleanup() {
-    __destroy_chroot()
+    __destroy_chroot
 }
 
 __chroot_cmd() {
