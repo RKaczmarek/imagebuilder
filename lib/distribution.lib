@@ -233,7 +233,7 @@ __extract_downloads() {
     __extract_file $PATH_DOWNLOAD/opengl-wayland-$SYSTEM-$ARCH.tar.gz
     __extract_file $PATH_DOWNLOAD/opengl-mesa-$ARCH-$DIST.tar.gz
     __extract_file $PATH_DOWNLOAD/xorg-armsoc-$ARCH-$DIST.tar.gz
-    __extract_file $PATH_DOWNLOAD/xorg-armsoc-$ARCH-$DIST.tar.gz
+    __extract_file $PATH_DOWNLOAD/gl4es-$ARCH-$DIST.tar.gz
 
     cd $O_WD
 }

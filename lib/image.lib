@@ -61,7 +61,7 @@ __calculate_image_sectors() {
     local SECTORS_BOOT=$( __get_boot_sectors )
     local SECTORS_BUILD=$( __get_build_sectors )
 
-    echo $(( $__SECTORS_ALIGNMENT + $SECTORS_BOOT + $SECTORS_BUILD + 2 ))
+    echo $(( $__SECTORS_ALIGNMENT + $SECTORS_BOOT + $SECTORS_BUILD + 1 ))
 }
 
 __create_image_file() {
