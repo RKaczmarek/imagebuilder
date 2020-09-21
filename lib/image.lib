@@ -35,7 +35,7 @@ __get_disk_usage() {
     local PATH_BUILD=$( get_path BUILD )
     local SIZE_RESULT=( $( du -s $PATH_BUILD ) )
 
-    echo $SIZE_RESULT[0]
+    echo $(( ${SIZE_RESULT[0]} * 1024 ))
 }
 
 __create_image_file() {
