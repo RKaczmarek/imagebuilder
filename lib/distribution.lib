@@ -67,6 +67,10 @@ create_fs() {
     __run_system_postinstall
 }
 
+create_fs_cleanup() {
+    __destroy_chroot()
+}
+
 __chroot_cmd() {
     local PATH_BUILD=$( get_path BUILD )
 

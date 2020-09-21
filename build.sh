@@ -32,7 +32,7 @@ load_paths $PATH_PROJECT_ROOT
 download_files
 recreate_build_path
 bootstrap
-create_fs
+create_fs || create_fs_cleanup
 
 if [ "${?}" -ne 0 ]
 then
