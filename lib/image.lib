@@ -136,7 +136,6 @@ t
 p
 w
 
-
 EOF
 
     # this is to make sure we really use the new partition table and have all partitions around
