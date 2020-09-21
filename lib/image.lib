@@ -184,7 +184,7 @@ __write_to_image() {
     umount $PATH_MOUNT/boot 
     umount $PATH_MOUNT
 
-    rmdir ${MOUNT_POINT}
+    rmdir $PATH_MOUNT
 }
 
 __cleanup_image() {
