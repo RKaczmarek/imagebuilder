@@ -17,7 +17,7 @@ __SIZE_BOOT=$(( 512 * 1024 * 1024 ))
 __SIZE_SWAP=$(( 1 * 1024 * 1024 * 1024 ))
 __SIZE_BUILD_FREE_SPACE=$(( 256 * 1024 * 1024 ))
 __SIZE_SECTOR=$(( 512 ))
-__SECTORS_ALIGNMENT=$(( 2048 ))
+__SECTORS_ALIGNMENT=$(( 32768 ))
 __LOOP_DISK=/dev/loop0
 
 create_image() {
@@ -81,10 +81,10 @@ __setup_loop_disk() {
 
     losetup $__LOOP_DISK $IMAGE_FILE_NAME
 
-    #local DUMP_FILE=$PATH_DOWNLOAD/boot-$SYSTEM-$ARCH.dd
-    #if [ -f $DUMP_FILE ]; then
-    #    dd if=$DUMP_FILE of=$__LOOP_DISK
-    #fi
+    local U_BOOT_DD=$PATH_DOWNLOAD/boot-$SYSTEM-$ARCH.dd
+    if [ -f $U_BOOT_DD ]; then
+       dd if=$U_BOOT_DD of=$__LOOP_DISK
+    fi
 
     # for the arm chromebooks an initial partition table is already in the boot.dd which needs to be fixed up now
     if [ "$SYSTEM" = "chromebook_snow" ] || [ "$SYSTEM" = "chromebook_veyron" ] || [ "$SYSTEM" = "chromebook_nyanbig" ]; then
