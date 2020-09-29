@@ -1,0 +1,347 @@
+#!/bin/bash
+
+declare -A __ARCH_MAP=( [armv7l]=armhf [aarch64]=arm64 )
+declare -A __BOOTSTRAP_INCLUDES=(
+    [ubuntu]="openssh-server,dosfstools,initramfs-tools"
+    [debian]="locales,vim,openssh-server,sudo,net-tools,ifupdown,iputils-ping,kmod,less,rsync,u-boot-tools,usbutils,dosfstools,mesa-utils,mesa-utils-extra,console-data,task-xfce-desktop,xserver-xorg-input-synaptics,blueman,firmware-linux-free,firmware-linux,firmware-linux-nonfree,firmware-brcm80211,firmware-samsung,firmware-libertas,pulseaudio,pavucontrol,lvm2,cryptsetup-bin,libllvm7"
+)
+
+bootstrap() {
+    local ARCH=$( get_option ARCH )
+    local DIST=$( get_option DIST )
+
+    if [ ! ${__ARCH_MAP[$ARCH]+_} ]
+    then
+        fail "Invalid architecture $ARCH for bootstrapping $DIST"
+    fi
+
+    local BOOTSTRAP_ARCH=${__ARCH_MAP[$ARCH]}
+    debug "Mapped $ARCH to $BOOTSTRAP_ARCH"
+
+    local PATH_CACHE=$( get_path BOOTSTRAP )
+    debug "Caching path for bootstrap is $PATH_CACHE"
+
+    if [[ $( contains_option FORCE_BOOTSTRAP ) == 1 ]]
+    then
+        debug "Recreating bootstrap for $DIST ($ARCH)"
+
+        if [ -d $PATH_CACHE ]
+        then
+            rm -r $PATH_CACHE
+        fi
+    fi
+
+    if [ ! -d $PATH_CACHE ]
+    then
+        debug "Caching bootstrap for $DIST ($ARCH) in $PATH_CACHE"
+        mkdir -p $PATH_CACHE
+
+        local INCLUDES=${__BOOTSTRAP_INCLUDES[$DIST]}
+
+        case $DIST in
+            ubuntu)
+                LANG=C debootstrap --arch=$BOOTSTRAP_ARCH --include=$INCLUDES focal $PATH_CACHE http://ports.ubuntu.com/
+            ;;
+            debian)
+                LANG=C debootstrap --variant=minbase --arch=$BOOTSTRAP_ARCH --include=$INCLUDES buster $PATH_CACHE http://deb.debian.org/debian/
+            ;;
+        esac
+    fi
+
+    rsync -aHAX --info=progress2 $PATH_CACHE/ $( get_path BUILD )
+}
+
+create_fs() {
+    # for testing - delete after
+    # end for testing - delete before
+
+    __copy_common_files
+    __copy_distribution_files
+    __write_hostname
+    __write_hosts
+
+    __setup_distribution
+
+    __copy_boot_files
+    __extract_downloads
+    __extract_system_files
+    __adjust_config_files
+    __update_initramfs
+    __run_system_postinstall
+}
+
+create_fs_cleanup() {
+    __destroy_chroot
+}
+
+__chroot_cmd() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    __init_chroot
+
+    debug "Running 'chroot $*' on $PATH_BUILD"
+    chroot $PATH_BUILD "$@"
+
+    __destroy_chroot
+}
+
+__init_chroot() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    debug "Initializing chroot on build path $PATH_BUILD"
+
+    mount -o ro,bind /etc/resolv.conf ${PATH_BUILD}/etc/resolv.conf
+    mount -o bind /dev ${PATH_BUILD}/dev
+    mount -o bind /dev/pts ${PATH_BUILD}/dev/pts
+    mount -t sysfs /sys ${PATH_BUILD}/sys
+    mount -t proc /proc ${PATH_BUILD}/proc
+}
+
+__destroy_chroot() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    debug "Destroying chroot on build path $PATH_BUILD"
+
+    umount ${PATH_BUILD}/proc
+    umount ${PATH_BUILD}/sys
+    umount ${PATH_BUILD}/dev/pts
+    umount ${PATH_BUILD}/dev
+    umount ${PATH_BUILD}/etc/resolv.conf
+}
+
+__write_hostname() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    if [[ $( contains_option HOSTNAME ) == 1 ]]
+    then
+        local HOSTNAME=$( get_option HOSTNAME )
+    else
+        local HOSTNAME=changeme
+    fi
+
+    debug "Writing hostname '$HOSTNAME'"
+
+    echo $HOSTNAME > $PATH_BUILD/etc/hostname
+}
+
+__write_hosts() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    if [[ $( contains_option HOSTNAME ) == 1 ]]
+    then
+        local HOSTNAME=$( get_option HOSTNAME )
+    else
+        local HOSTNAME=changeme
+    fi
+
+    cat <<EOF > $PATH_BUILD/etc/hosts
+127.0.0.1	localhost
+127.0.1.1	${HOSTNAME}
+
+# The following lines are desirable for IPv6 capable hosts
+::1     ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+EOF
+}
+
+__copy_common_files() {
+    debug "Syncing common distribution files"
+    __copy_files "common"
+}
+
+__copy_distribution_files() {
+    local DIST=$( get_option DIST )
+
+    debug "Syncing files for distribution '$DIST'"
+    __copy_files $DIST
+}
+
+__copy_files() {
+    local SUBDIR=$1
+    local PATH_FILES=$( get_path FILES )
+    local PATH_BUILD=$( get_path BUILD )
+
+    rsync -aHAXI --info=progress2 $PATH_FILES/distribution/$SUBDIR/ $PATH_BUILD
+}
+
+__setup_distribution() {
+    debug "Setting up distribution"
+
+    __chroot_cmd systemctl enable ssh
+    __chroot_cmd systemctl disable fstrim.timer
+    # in case you want to disable automatic updates
+    #__chroot_cmd systemctl disable apt-daily
+    #__chroot_cmd systemctl disable apt-daily-upgrade
+
+    __chroot_cmd useradd -c linux -d /home/linux -m -p '$6$sEhhlter$njAiCsaYr7lveaAQCmsABlrGbrVip/lcBUlY2M9DUHfaUh0zSLfcJ4mN0BDqH7bg/2BITbp7BK3qPf8zR.3Ad0' -s /bin/bash linux
+    __chroot_cmd usermod -a -G sudo linux
+    __chroot_cmd usermod -a -G audio linux
+    __chroot_cmd usermod -a -G video linux
+
+    # setup locale info for en-us
+    __chroot_cmd sed -i 's,# en_US ISO-8859-1,en_US ISO-8859-1,g;s,# en_US.UTF-8 UTF-8,en_US.UTF-8 UTF-8,g' /etc/locale.gen
+    __chroot_cmd locale-gen
+}
+
+__copy_boot_files() {
+    local PATH_BUILD=$( get_path BUILD )
+    local PATH_FILES=$( get_path FILES )
+    local ARCH=$( get_option ARCH )
+    local SYSTEM=$( get_option SYSTEM )
+
+    local PATH_BOOT_FILES=$PATH_FILES/boot/boot-$SYSTEM-$ARCH
+    if [ -d $PATH_BOOT_FILES ]
+    then
+        debug "Copying files from $PATH_BOOT_FILES"
+        rsync -aHAX --info=progress2 $PATH_BOOT_FILES/ $PATH_BUILD/boot
+    fi
+}
+
+__extract_downloads() {
+    local PATH_DOWNLOAD=$( get_path DOWNLOAD )
+    local PATH_BUILD=$( get_path BUILD )
+    local DIST=$( get_option DIST )
+    local ARCH=$( get_option ARCH )
+    local SYSTEM=$( get_option SYSTEM )
+    local O_WD=$( pwd )
+
+    debug "Old working directory is '$O_WD'"
+
+    local CURRENT_FILE=$PATH_DOWNLOAD/kernel-$SYSTEM-$ARCH.tar.gz
+
+    debug "Changing working directory to '$PATH_BUILD/boot'"
+    cd $PATH_BUILD/boot
+
+    debug "Extracting file $CURRENT_FILE"
+    tar --numeric-owner --strip-components=2 -xzf $CURRENT_FILE ./boot
+
+    debug "Changing working directory to '$PATH_BUILD/lib'"
+    cd $PATH_BUILD/lib
+
+    debug "Extracting file $CURRENT_FILE"
+    tar --numeric-owner --strip-components=2 -xzf $CURRENT_FILE ./lib/modules
+
+    debug "Changing working directory to '$PATH_BUILD'"
+    cd $PATH_BUILD
+
+    __extract_file $PATH_DOWNLOAD/kernel-mali-$SYSTEM-$ARCH.tar.gz
+    __extract_file $PATH_DOWNLOAD/opengl-$SYSTEM-$ARCH.tar.gz
+    __extract_file $PATH_DOWNLOAD/opengl-fbdev-$SYSTEM-$ARCH.tar.gz
+    __extract_file $PATH_DOWNLOAD/opengl-wayland-$SYSTEM-$ARCH.tar.gz
+    __extract_file $PATH_DOWNLOAD/opengl-mesa-$ARCH-$DIST.tar.gz
+    __extract_file $PATH_DOWNLOAD/xorg-armsoc-$ARCH-$DIST.tar.gz
+    __extract_file $PATH_DOWNLOAD/gl4es-$ARCH-$DIST.tar.gz
+
+    cd $O_WD
+}
+
+__extract_file() {
+    local FILE_TO_EXTRACT=$1
+    
+    if [ -f $FILE_TO_EXTRACT ]
+    then
+        debug "Extracting file $FILE_TO_EXTRACT"
+        tar --numeric-owner -xzf $FILE_TO_EXTRACT
+    fi
+}
+
+__extract_system_files() {
+    local PATH_BUILD=$( get_path BUILD )
+    local PATH_FILES=$( get_path FILES )
+    local DIST=$( get_option DIST )
+    local ARCH=$( get_option ARCH )
+    local SYSTEM=$( get_option SYSTEM )
+
+    local PATH_SYSTEM_FILES=$PATH_FILES/systems/$SYSTEM
+    local SOURCE=$PATH_SYSTEM_FILES/extra-files-$SYSTEM-$ARCH
+    if [ -d $SOURCE ]; then
+        debug "Syncing '$SOURCE' to '$PATH_BUILD'"
+        rsync -aHAXI --info=progress2 $SOURCE/ $PATH_BUILD
+    fi
+
+    SOURCE=$PATH_SYSTEM_FILES/extra-files-$SYSTEM-$ARCH-$DIST
+    if [ -d $SOURCE ]; then
+        debug "Syncing '$SOURCE' to '$PATH_BUILD'"
+        rsync -aHAXI --info=progress2 $SOURCE/ $PATH_BUILD
+    fi
+    
+    local RC_LOCAL_FILE=$PATH_BUILD/etc/rc.local
+    if [ -f $PATH_SYSTEM_FILES/rc-local-additions-$SYSTEM-$ARCH-$DIST.txt ]; then
+        debug "Writing additions to $RC_LOCAL_FILE"
+
+        echo "" >> $RC_LOCAL_FILE
+        echo "# additions for $SYSTEM-$ARCH-$DIST" >> $RC_LOCAL_FILE
+        echo "" >> $RC_LOCAL_FILE
+        cat $PATH_SYSTEM_FILES/rc-local-additions-$SYSTEM-$ARCH-$DIST.txt >> $RC_LOCAL_FILE
+    fi
+
+    echo "" >> $RC_LOCAL_FILE
+    echo "exit 0" >> $RC_LOCAL_FILE
+}
+
+__adjust_config_files() {
+    local PATH_BUILD=$( get_path BUILD )
+
+    if [ -f $PATH_BUILD/etc/modules-load.d/cups-filters.conf ]; then
+        debug "Adjusting cups-filters"
+
+        sed -i 's,^lp,#lp,g' $PATH_BUILD/etc/modules-load.d/cups-filters.conf
+        sed -i 's,^ppdev,#ppdev,g' $PATH_BUILD/etc/modules-load.d/cups-filters.conf
+        sed -i 's,^parport_pc,#parport_pc,g' $PATH_BUILD/etc/modules-load.d/cups-filters.conf
+    fi
+
+    if [ -f $PATH_BUILD/etc/NetworkManager/NetworkManager.conf ]; then
+        debug "Adjusting NetworkManager configuration"
+        
+        sed -i 's,^managed=false,managed=true,g' $PATH_BUILD/etc/NetworkManager/NetworkManager.conf
+        touch $PATH_BUILD/etc/NetworkManager/conf.d/10-globally-managed-devices.conf
+    fi
+
+    if [ -f $PATH_BUILD/etc/default/numlockx ]; then
+        debug "Adjusting numlock"
+        
+        sed -i 's,^NUMLOCK=auto,NUMLOCK=off,g' $PATH_BUILD/etc/default/numlockx
+    fi
+}
+
+__update_initramfs() {
+    local PATH_BUILD=$( get_path BUILD )
+    local KERNEL_VERSION=`ls $PATH_BUILD/boot/*Image-* | sed 's,.*Image-,,g' | sort -u`
+
+    local FSCK_ORIGIN=$PATH_BUILD/usr/share/initramfs-tools/hooks/fsck
+    local FSCK_BACKUP=$PATH_BUILD/tmp/fsck.org
+
+    debug "Updating initramfs"
+
+    # hack to get the fsck binaries in properly even in our chroot env
+    cp -f $FSCK_ORIGIN $FSCK_BACKUP
+    sed -i 's,fsck_types=.*,fsck_types="vfat ext4",g' $FSCK_ORIGIN
+    __chroot_cmd update-initramfs -c -k $KERNEL_VERSION
+    mv -f $FSCK_BACKUP $FSCK_ORIGIN
+}
+
+__run_system_postinstall() {
+    local PATH_BUILD=$( get_path BUILD )
+    local PATH_FILES=$( get_path FILES )
+    local DIST=$( get_option DIST )
+    local ARCH=$( get_option ARCH )
+    local SYSTEM=$( get_option SYSTEM )
+    local O_WD=$( pwd )
+
+    local PATH_SYSTEM_FILES=$PATH_FILES/systems/$SYSTEM
+    local POSTINSTALL_SCRIPT=$PATH_SYSTEM_FILES/postinstall-$SYSTEM-$ARCH-$DIST.sh
+
+    
+    if [ -x $POSTINSTALL_SCRIPT ]; then
+        debug "Running postinstll script for $SYSTEM-$ARCH-$DIST"
+
+        cd $PATH_BUILD
+        $POSTINSTALL_SCRIPT
+        cd $O_WD
+    fi
+
+    __chroot_cmd ldconfig
+}

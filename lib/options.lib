@@ -1,0 +1,205 @@
+#!/bin/bash
+
+declare -A __OPTIONS
+declare -a __UNKNOWN
+declare -a __VALIDATION_ERRORS
+
+load_options() {
+    local ARGS=( "$@" )
+
+    for i in ${ARGS[@]}
+    do
+        case $i in
+            -a=*|--arch=*|--architecture=*)
+                __OPTIONS[ARCH]="${i#*=}"
+                shift
+            ;;
+            -c=*|--cache=*|--cache-dir=*)
+                __OPTIONS[PATH_CACHE]="${i#*=}"
+                shift
+            ;;
+            -d=*|--dist=*|--distribution=*)
+                __OPTIONS[DIST]="${i#*=}"
+                shift
+            ;;
+            -g*|--gui*)
+                __OPTIONS[GUI]=1
+                shift
+            ;;
+            -h*|--help*)
+                __OPTIONS[HELP]=1
+                shift
+            ;;
+            -o=*|--out=*|--out-dir=*)
+                __OPTIONS[PATH_OUT]="${i#*=}"
+                shift
+            ;;
+            -s=*|--system=*)
+                __OPTIONS[SYSTEM]="${i#*=}"
+                shift
+            ;;
+            -v*|--verbose*)
+                __OPTIONS[VERBOSE]=1
+                shift
+            ;;
+            --disable-swap)
+                __OPTIONS[FORCE_DOWNLOAD]=1
+                shift
+            ;;
+            --force-bootstrap)
+                __OPTIONS[FORCE_BOOTSTRAP]=1
+                shift
+            ;;
+            --force-download)
+                __OPTIONS[FORCE_DOWNLOAD]=1
+                shift
+            ;;
+            --hostname=*)
+                __OPTIONS[HOSTNAME]="${i#*=}"
+                shift
+            ;;
+            *)
+                # unknown option
+                __UNKNOWN+=( $i )
+            ;;
+        esac
+    done
+}
+
+get_option() {
+    local NAME=$1
+    echo ${__OPTIONS[$NAME]}
+}
+
+contains_option() {
+    local NAME=$1
+    if [ ${__OPTIONS[$NAME]+_} ]
+    then
+        echo 1
+    else
+        echo 0
+    fi
+}
+
+validate_options() {
+    __validate_system
+    __validate_arch
+    __validate_dist
+    __validate_cache
+    __validate_out
+    __validate_hostname
+    __validate_unknown
+
+    if [[ $( is_valid ) == 0 ]]
+    then
+        echo ""
+        echo "Stopped with errors:"
+
+        for ERROR in "${__VALIDATION_ERRORS[@]}"
+        do
+            error "$ERROR"
+        done
+
+        exit 1
+    fi
+}
+
+is_valid() {
+    if [ ${#__VALIDATION_ERRORS} -gt 0 ]
+    then
+        echo 0
+    else
+        echo 1
+    fi
+}
+
+__validate_system() {
+    local SYSTEM=$( get_option SYSTEM )
+    debug "Validating system $SYSTEM"
+    case $SYSTEM in
+        chromebook_snow) ;;
+        chromebook_veyron) ;;
+        chromebook_nyanbig) ;;
+        odroid_u3) ;;
+        orbsmart_s92_beelink_r89) ;;
+        tinkerboard) ;;
+        raspberry_pi) ;;
+        raspberry_pi_4) ;;
+        amlogic_gx) ;;
+        *) __VALIDATION_ERRORS+=( "Invalid system $SYSTEM" ) ;;
+    esac
+}
+
+__validate_arch() {
+    local ARCH=$( get_option ARCH )
+    debug "Validating architecture $ARCH"
+    case $ARCH in
+        armv7l) ;;
+        aarch64) ;;
+        *) __VALIDATION_ERRORS+=( "Invalid architecture $ARCH" ) ;;
+    esac
+}
+
+__validate_dist() {
+    local DIST=$( get_option DIST )
+    debug "Validating distribution $DIST"
+    case $DIST in
+        ubuntu) ;;
+        debian) ;;
+        *) __VALIDATION_ERRORS+=( "Invalid distribution $DIST" ) ;;
+    esac
+}
+
+__validate_cache() {
+    debug "Looking for cache option"
+    if [[ $( contains_option PATH_CACHE ) == 1 ]]
+    then
+        local PATH_CACHE=$( get_option PATH_CACHE )
+        debug "Validating cache option '$PATH_CACHE'"
+        if [ ! -d $PATH_CACHE ]
+        then
+            __VALIDATION_ERRORS+=( "The cache directory $PATH_CACHE does not exist" )
+        fi
+    fi
+}
+
+__validate_out() {
+    debug "Looking for output option"
+    if [[ $( contains_option PATH_OUT ) == 1 ]]
+    then
+        local PATH_OUT=$( get_option PATH_OUT )
+        debug "Validating output option '$PATH_OUT'"
+        if [ ! -d $PATH_OUT ]
+        then
+            __VALIDATION_ERRORS+=( "The output directory $PATH_OUT does not exist" )
+        fi
+    fi
+}
+
+__validate_hostname() {
+    local HOSTNAME_REGEX="^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\-]*[A-Za-z0-9])$"
+
+    debug "Looking for hostname option"
+    if [[ $( contains_option HOSTNAME ) == 1 ]]
+    then
+        local HOSTNAME=$( get_option HOSTNAME )
+        debug "Validating hostname option '$HOSTNAME'"
+
+        if [[ ! $HOSTNAME =~ $HOSTNAME_REGEX ]]
+        then
+            __VALIDATION_ERRORS+=( "The hostname $HOSTNAME is not valid" )
+        fi
+    fi
+}
+
+__validate_unknown() {
+    debug "Looking for unknown options"
+    if [ ${#__UNKNOWN} -gt 0 ]
+    then
+        debug "Found unknown options"
+        for __UNKNOWN_ARG in "${__UNKNOWN[@]}"
+        do
+            __VALIDATION_ERRORS+=( "Invalid argument $__UNKNOWN_ARG" )
+        done
+    fi
+}
