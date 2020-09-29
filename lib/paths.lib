@@ -1,0 +1,66 @@
+#!/bin/bash
+
+declare -A __PATHS
+
+recreate_build_path() {
+    local PATH_BUILD=$( get_path BUILD )
+    
+    if [ -d $PATH_BUILD ]
+    then
+        debug "Deleting build directory $PATH_BUILD"
+        rm -R $PATH_BUILD
+    fi
+
+    debug "Creating build directory $PATH_BUILD"
+    mkdir -p $PATH_BUILD
+}
+
+load_paths() {
+    local PATH_PROJECT_ROOT=$1
+    local PATH_CACHE_DEFAULT=$PATH_PROJECT_ROOT/cache
+    local PATH_OUT_DEFAULT=$PATH_PROJECT_ROOT/out
+
+    __PATHS[FILES]=$PATH_PROJECT_ROOT/files
+
+    __create_path_from_option PATH_CACHE CACHE $PATH_CACHE_DEFAULT
+    __create_path_from_option PATH_OUT OUT $PATH_OUT_DEFAULT
+
+    local PATH_OUT=$( get_path OUT )
+    __PATHS[BUILD]=$PATH_OUT/build
+    __PATHS[DIST]=$PATH_OUT/dist
+
+    local PATH_CACHE=$( get_path CACHE )
+    local ARCH=$( get_option ARCH )
+    local DIST=$( get_option DIST )
+    local SYSTEM=$( get_option SYSTEM )
+    __PATHS[BOOTSTRAP]=$PATH_CACHE/bootstrap/$DIST/$ARCH
+    __PATHS[DOWNLOAD]=$PATH_CACHE/download/$SYSTEM/$ARCH
+}
+
+get_path() {
+    local KEY=$1
+    echo ${__PATHS[$KEY]}
+}
+
+__create_path_from_option() {
+    local OPTION_NAME=$1
+    local PATH_NAME=$2
+    local DEFAULT_PATH=$3
+    local TARGET_PATH=$DEFAULT_PATH
+    
+    debug "Looking for option $OPTION_NAME"
+    if [[ $( contains_option $OPTION_NAME ) == 1 ]]
+    then
+        TARGET_PATH=$( get_option $OPTION_NAME )
+        debug "Found option $OPTION_NAME. Setting path to $TARGET_PATH"
+    else
+        debug "Option $OPTION_NAME not found. Using default path $TARGET_PATH"
+        if [ ! -d $TARGET_PATH ]
+        then
+            debug "Path $TARGET_PATH does not exist. Creating..."
+            mkdir $TARGET_PATH
+        fi
+    fi
+
+    __PATHS[$PATH_NAME]=$TARGET_PATH
+}

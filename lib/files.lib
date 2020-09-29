@@ -1,0 +1,252 @@
+#!/bin/bash
+
+__GENERIC_TREE_TAG="9051dfe1f2198e2ed41c322359ee8324043d55a9"
+
+download_files() {
+    local PATH_WD=$( pwd )
+    local PATH_DOWNLOAD=$( get_path DOWNLOAD )
+    local SYSTEM=$( get_option SYSTEM )
+    debug "Download cache path is $PATH_DOWNLOAD"
+
+    if [[ $( contains_option FORCE_DOWNLOAD ) == 1 ]]
+    then
+        debug "Deleting download cache folder $PATH_DOWNLOAD"
+        rm -r $PATH_DOWNLOAD
+    fi
+
+    if [ ! -d $PATH_DOWNLOAD ]
+    then
+        debug "Creating download cache folder $PATH_DOWNLOAD"
+        mkdir -p $PATH_DOWNLOAD
+
+        cd $PATH_DOWNLOAD
+        __download_files_by_system $SYSTEM
+        cd $PATH_WD
+    else
+        debug "Files already downloaded. Abborting download."
+    fi
+}
+
+__download_files_by_system() {
+    local SYSTEM=$1
+    local ARCH=$( get_option ARCH )
+
+    case $SYSTEM in
+        chromebook_snow)
+            __download_chromebook_snow_files
+        ;;
+        chromebook_veyron)
+            __download_chromebook_veyron_files
+        ;;
+        chromebook_nyanbig)
+            __download_chromebook_nyanbig_files
+        ;;
+        odroid_u3)
+            __download_odroid_u3_files
+        ;;
+        orbsmart_s92_beelink_r89)
+            __download_orbsmart_s92_beelink_r89_files
+        ;;
+        tinkerboard)
+            __download_tinkerboard_files
+        ;;
+        raspberry_pi)
+            if [[ $ARCH == "armv7l" ]]
+            then
+                __download_raspberry_pi_armv7l_files
+            else
+                __download_raspberry_pi_aarch64_files
+            fi
+        ;;
+        raspberry_pi_4)
+            if [[ $ARCH == "armv7l" ]]
+            then
+                __download_raspberry_pi_4_armv7l_files
+            else
+                __download_raspberry_pi_4_aarch64_files
+            fi
+        ;;
+        amlogic_gx)
+            if [[ $ARCH == "armv7l" ]]
+            then
+                __download_amlogic_gx_armv7l_files
+            else
+                __download_amlogic_gx_aarch64_files
+            fi
+        ;;
+    esac
+}
+
+__download_chromebook_snow_files() {
+    debug "Downloading files for chromebook snow"
+    local RELEASE_VERSION="5.4.14-stb-cbe%2B"
+    local UBOOT_VERSION="v2020.04-cbe"
+
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}.tar.gz -O kernel-chromebook_snow-armv7l.tar.gz
+    # we assemble the bootblocks from a prepared chromebook partition table and the proper u-boot kpart image
+    cp files/chromebook-boot/cb.dd-single-part boot-chromebook_snow-armv7l.dd
+    wget -v https://github.com/hexdump0815/u-boot-chainloading-for-arm-chromebooks/releases/download/${UBOOT_VERSION}/uboot.kpart.cbe.gz -O - | gunzip -c >> boot-chromebook_snow-armv7l.dd
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-debian.tar.gz -O gl4es-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-ubuntu.tar.gz -O gl4es-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-debian.tar.gz -O xorg-armsoc-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-ubuntu.tar.gz -O xorg-armsoc-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-exynos5250-armv7l.tar.gz -O opengl-chromebook_snow-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-exynos5250-fbdev-r5p0-armv7l.tar.gz -O opengl-fbdev-chromebook_snow-armv7l.tar.gz
+}
+
+__download_chromebook_veyron_files() {
+    debug "Downloading files for chromebook veyron"
+    local RELEASE_VERSION="5.4.31-stb-cbr%2B"
+    local UBOOT_VERSION="v2020.04-cbr"
+
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${release_version}/${release_version}.tar.gz -O kernel-chromebook_veyron-armv7l.tar.gz
+    # we assemble the bootblocks from a prepared chromebook partition table and the proper u-boot kpart image
+    cp files/chromebook-boot/cb.dd-single-part boot-chromebook_veyron-armv7l.dd
+    wget -v https://github.com/hexdump0815/u-boot-chainloading-for-arm-chromebooks/releases/download/${uboot_version}/uboot.kpart.cbr.gz -O - | gunzip -c >> boot-chromebook_veyron-armv7l.dd
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-debian.tar.gz -O gl4es-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-ubuntu.tar.gz -O gl4es-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-debian.tar.gz -O xorg-armsoc-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-ubuntu.tar.gz -O xorg-armsoc-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-rk3288-armv7l.tar.gz -O opengl-chromebook_veyron-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-rk3288-fbdev-armv7l.tar.gz -O opengl-fbdev-chromebook_veyron-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-rk3288-wayland-armv7l.tar.gz -O opengl-wayland-chromebook_veyron-armv7l.tar.gz
+}
+
+__download_chromebook_nyanbig_files() {
+    debug "Downloading files for chromebook nyanbig"
+    local RELEASE_VERSION="5.4.35-ntg-cbt%2B"
+    local UBOOT_VERSION="v2018.11-cbt"
+
+    wget -v https://github.com/hexdump0815/linux-mainline-tegra-k1-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}.tar.gz -O kernel-chromebook_nyanbig-armv7l.tar.gz
+    # we assemble the bootblocks from a prepared chromebook partition table and the proper u-boot kpart image
+    cp files/chromebook-boot/cb.dd-single-part boot-chromebook_nyanbig-armv7l.dd
+    wget -v https://github.com/hexdump0815/u-boot-chainloading-for-arm-chromebooks/releases/download/${UBOOT_VERSION}/uboot.kpart.cbt.gz -O - | gunzip -c >> boot-chromebook_nyanbig-armv7l.dd
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-debian.tar.gz -O gl4es-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-ubuntu.tar.gz -O gl4es-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/mesa-etc-build/releases/download/${MESA_RELEASE_VERSION}/opt-mesa-armv7l-debian.tar.gz -O opengl-mesa-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/mesa-etc-build/releases/download/${MESA_RELEASE_VERSION}/opt-mesa-armv7l-ubuntu.tar.gz -O opengl-mesa-armv7l-ubuntu.tar.gz
+}
+
+__download_odroid_u3_files() {
+    debug "Downloading files for odroid u3"
+    local RELEASE_VERSION="5.4.20-stb-exy%2B-20200515-0233"
+
+    wget -v https://github.com/RKaczmarek/kernel-odroid-u3/releases/download/${RELEASE_VERSION}-active/${RELEASE_VERSION}.tar.gz -O kernel-odroid_u3-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc.exy/u-boot/boot-odroid_u3-armv7l.dd -O boot-odroid_u3-armv7l.dd
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-debian.tar.gz -O gl4es-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-ubuntu.tar.gz -O gl4es-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-debian.tar.gz -O xorg-armsoc-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-ubuntu.tar.gz -O xorg-armsoc-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-exynos4412-armv7l.tar.gz -O opengl-odroid_u3-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-exynos4412-fbdev-armv7l.tar.gz -O opengl-fbdev-odroid_u3-armv7l.tar.gz
+}
+
+__download_orbsmart_s92_beelink_r89_files() {
+    debug "Downloading files for orbsmart s92 beelink r89"
+    local RELEASE_VERSION="5.4.14-stb-av7%2B"
+
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}.tar.gz -O kernel-orbsmart_s92_beelink_r89-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}-mali-rk3288.tar.gz -O kernel-mali-orbsmart_s92_beelink_r89-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-debian.tar.gz -O gl4es-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-ubuntu.tar.gz -O gl4es-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-debian.tar.gz -O xorg-armsoc-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-ubuntu.tar.gz -O xorg-armsoc-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-rk3288-armv7l.tar.gz -O opengl-orbsmart_s92_beelink_r89-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-rk3288-fbdev-armv7l.tar.gz -O opengl-fbdev-orbsmart_s92_beelink_r89-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-rk3288-wayland-armv7l.tar.gz -O opengl-wayland-orbsmart_s92_beelink_r89-armv7l.tar.gz
+}
+
+__download_tinkerboard_files() {
+    debug "Downloading files for tinkerboard"
+    local RELEASE_VERSION="5.4.14-stb-av7%2B"
+
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}.tar.gz -O kernel-tinkerboard-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}-mali-rk3288.tar.gz -O kernel-mali-tinkerboard-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc.av7/u-boot/boot-tinkerboard-armv7l.dd -O boot-tinkerboard-armv7l.dd
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-debian.tar.gz -O gl4es-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-ubuntu.tar.gz -O gl4es-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-debian.tar.gz -O xorg-armsoc-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-ubuntu.tar.gz -O xorg-armsoc-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-rk3288-armv7l.tar.gz -O opengl-tinkerboard-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-rk3288-fbdev-armv7l.tar.gz -O opengl-fbdev-tinkerboard-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-rk3288-wayland-armv7l.tar.gz -O opengl-wayland-tinkerboard-armv7l.tar.gz
+}
+
+__download_raspberry_pi_armv7l_files() {
+    debug "Downloading files for raspberry pi (armv7l)"
+    local RELEASE_VERSION="5.4.14-stb-av7%2B"
+    local MESA_RELEASE_VERSION="20.0.6"
+
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}.tar.gz -O kernel-raspberry_pi-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-debian.tar.gz -O gl4es-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-ubuntu.tar.gz -O gl4es-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/mesa-etc-build/releases/download/${MESA_RELEASE_VERSION}/opt-mesa-armv7l-debian.tar.gz -O opengl-mesa-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/mesa-etc-build/releases/download/${MESA_RELEASE_VERSION}/opt-mesa-armv7l-ubuntu.tar.gz -O opengl-mesa-armv7l-ubuntu.tar.gz
+}
+
+__download_raspberry_pi_aarch64_files() {
+    debug "Downloading files for raspberry pi aarch64"
+    local RELEASE_VERSION="5.4.14-stb-av8%2B"
+    local MESA_RELEASE_VERSION="20.0.6"
+
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}.tar.gz -O kernel-raspberry_pi-aarch64.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-aarch64-debian.tar.gz -O gl4es-aarch64-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-aarch64-ubuntu.tar.gz -O gl4es-aarch64-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/mesa-etc-build/releases/download/${MESA_RELEASE_VERSION}/opt-mesa-aarch64-debian.tar.gz -O opengl-mesa-aarch64-debian.tar.gz
+    wget -v https://github.com/hexdump0815/mesa-etc-build/releases/download/${MESA_RELEASE_VERSION}/opt-mesa-aarch64-ubuntu.tar.gz -O opengl-mesa-aarch64-ubuntu.tar.gz
+}
+
+__download_raspberry_pi_4_armv7l_files() {
+    debug "Downloading files for raspberry pi 4 armv7l"
+    local RELEASE_VERSION="5.6.10-rpi-64b%2B"
+    local MESA_RELEASE_VERSION="20.0.6"
+
+    wget -v https://github.com/hexdump0815/linux-raspberry-pi-4-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}.tar.gz -O kernel-raspberry_pi_4-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-debian.tar.gz -O gl4es-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-ubuntu.tar.gz -O gl4es-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/mesa-etc-build/releases/download/${MESA_RELEASE_VERSION}/opt-mesa-armv7l-debian.tar.gz -O opengl-mesa-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/mesa-etc-build/releases/download/${MESA_RELEASE_VERSION}/opt-mesa-armv7l-ubuntu.tar.gz -O opengl-mesa-armv7l-ubuntu.tar.gz
+}
+
+__download_raspberry_pi_4_aarch64_files() {
+    debug "Downloading files for raspberry pi 4 aarch64"
+    local RELEASE_VERSION="5.6.10-rpi-64b%2B"
+    local MESA_RELEASE_VERSION="20.0.6"
+
+    wget -v https://github.com/hexdump0815/linux-raspberry-pi-4-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}.tar.gz -O kernel-raspberry_pi_4-aarch64.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-aarch64-debian.tar.gz -O gl4es-aarch64-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-aarch64-ubuntu.tar.gz -O gl4es-aarch64-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/mesa-etc-build/releases/download/${MESA_RELEASE_VERSION}/opt-mesa-aarch64-debian.tar.gz -O opengl-mesa-aarch64-debian.tar.gz
+    wget -v https://github.com/hexdump0815/mesa-etc-build/releases/download/${MESA_RELEASE_VERSION}/opt-mesa-aarch64-ubuntu.tar.gz -O opengl-mesa-aarch64-ubuntu.tar.gz
+}
+
+__download_amlogic_gx_armv7l_files() {
+    debug "Downloading files for "
+    local RELEASE_VERSION="5.4.14-stb-av8%2B"
+
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}.tar.gz -O kernel-amlogic_gx-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}-mali-s905.tar.gz -O kernel-mali-amlogic_gx-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc.av8/u-boot/boot-odroid_c2-aarch64.dd -O boot-amlogic_gx-armv7l.dd
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-debian.tar.gz -O gl4es-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-armv7l-ubuntu.tar.gz -O gl4es-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-debian.tar.gz -O xorg-armsoc-armv7l-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-armv7l-ubuntu.tar.gz -O xorg-armsoc-armv7l-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-s905-fbdev-armv7l.tar.gz -O opengl-fbdev-amlogic_gx-armv7l.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-s905-wayland-armv7l.tar.gz -O opengl-wayland-amlogic_gx-armv7l.tar.gz
+}
+
+__download_amlogic_gx_aarch64_files() {
+    debug "Downloading files for "
+    local RELEASE_VERSION="5.4.14-stb-av8%2B"
+
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}.tar.gz -O kernel-amlogic_gx-aarch64.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/releases/download/${RELEASE_VERSION}/${RELEASE_VERSION}-mali-s905.tar.gz -O kernel-mali-amlogic_gx-aarch64.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc.av8/u-boot/boot-odroid_c2-aarch64.dd -O boot-amlogic_gx-aarch64.dd
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-aarch64-debian.tar.gz -O gl4es-aarch64-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/gl4es-aarch64-ubuntu.tar.gz -O gl4es-aarch64-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-aarch64-debian.tar.gz -O xorg-armsoc-aarch64-debian.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/xorg-armsoc-aarch64-ubuntu.tar.gz -O xorg-armsoc-aarch64-ubuntu.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-s905-aarch64.tar.gz -O opengl-amlogic_gx-aarch64.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-s905-fbdev-aarch64.tar.gz -O opengl-fbdev-amlogic_gx-aarch64.tar.gz
+    wget -v https://github.com/hexdump0815/linux-mainline-and-mali-generic-stable-kernel/raw/${__GENERIC_TREE_TAG}/misc/opt-mali-s905-wayland-aarch64.tar.gz -O opengl-wayland-amlogic_gx-aarch64.tar.gz
+}
