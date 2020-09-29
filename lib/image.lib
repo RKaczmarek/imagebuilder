@@ -77,13 +77,15 @@ __create_image_file() {
 __setup_loop_disk() {
     local IMAGE_FILE_NAME=$( __get_image_file_name )
     local PATH_DOWNLOAD=$( get_path DOWNLOAD )
+    local ARCH=$( get_option ARCH )
     local SYSTEM=$( get_option SYSTEM )
 
     losetup $__LOOP_DISK $IMAGE_FILE_NAME
 
     local U_BOOT_DD=$PATH_DOWNLOAD/boot-$SYSTEM-$ARCH.dd
     if [ -f $U_BOOT_DD ]; then
-       dd if=$U_BOOT_DD of=$__LOOP_DISK
+        debug "Writing uboot from $U_BOOT_DD to disk"
+        dd if=$U_BOOT_DD of=$__LOOP_DISK
     fi
 
     # for the arm chromebooks an initial partition table is already in the boot.dd which needs to be fixed up now
